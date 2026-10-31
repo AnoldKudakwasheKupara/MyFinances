@@ -1,0 +1,146 @@
+@model MyFinances.Services.Reporting.Report
+@using System.Text.Json
+@using MyFinances.Services
+@{
+    var d = Model.Definition;
+    ViewData["Title"] = d.Title;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Reports", Url.Action("Index")!) };
+
+    var from = Model.Range.Start.ToString("yyyy-MM-dd");
+    var to = Model.Range.End.ToString("yyyy-MM-dd");
+    var today = UserPreferences.Today;
+
+    var presets = new List<(string Label, DateRange Range)>
+    {
+        ("This month", Periods.Month(today)),
+        ("Last month", Periods.Month(today.AddMonths(-1))),
+        ("Last 3 months", new DateRange(Periods.MonthStart(today).AddMonths(-2), today)),
+        ("This year", Periods.Year(today)),
+        ("Last 12 months", new DateRange(Periods.MonthStart(today).AddMonths(-11), today))
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@d.Title</h1>
+        <p class="page-lede">@d.Description</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Export" asp-route-id="@d.Key" asp-route-format="csv" asp-route-from="@from" asp-route-to="@to"><i class="bi bi-filetype-csv" aria-hidden="true"></i> CSV</a>
+        <a class="btn btn-light" asp-action="Export" asp-route-id="@d.Key" asp-route-format="pdf" asp-route-from="@from" asp-route-to="@to"><i class="bi bi-filetype-pdf" aria-hidden="true"></i> PDF</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="filter-bar" aria-label="Report dates">
+            @if (d.UsesRange)
+            {
+                <div>
+                    <label class="form-label" for="from">From</label>
+                    <input class="form-control" id="from" name="from" type="date" value="@from" />
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="from" value="@from" />
+            }
+            <div>
+                <label class="form-label" for="to">@(d.UsesRange ? "To" : "As of")</label>
+                <input class="form-control" id="to" name="to" type="date" value="@to" />
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" type="submit">Update</button>
+            </div>
+            @if (d.UsesRange)
+            {
+                <div class="d-flex flex-wrap gap-1 align-items-end" style="grid-column: 1 / -1">
+                    @foreach (var (label, range) in presets)
+                    {
+                        <a class="btn btn-sm btn-light @(range.Start == Model.Range.Start && range.End == Model.Range.End ? "active" : "")"
+                           asp-route-id="@d.Key" asp-route-from="@range.Start.ToString("yyyy-MM-dd")" asp-route-to="@range.End.ToString("yyyy-MM-dd")">@label</a>
+                    }
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+@if (Model.Chart != null && Model.Rows.Any())
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="chart-box">
+                <canvas id="report-chart" data-chart="@Model.Chart.Kind" data-values="@JsonSerializer.Serialize(Model.Chart.Data)" role="img" aria-label="@d.Title chart; the same figures are in the table below"></canvas>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <span class="panel-title">@Model.Period</span>
+        <span class="panel-note">Amounts in @Model.Currency unless a currency is shown</span>
+    </div>
+
+    @if (!Model.Rows.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-@d.Icon" aria-hidden="true"></i></div>
+            <div class="empty-title">Nothing to report for these dates</div>
+            <p class="empty-text">Try a wider range, or add the records this report is built from.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-stack">
+                <thead>
+                    <tr>
+                        @foreach (var c in Model.Columns)
+                        {
+                            <th class="@(c.Numeric ? "text-end" : "")">@c.Header</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            @for (var i = 0; i < Model.Columns.Count; i++)
+                            {
+                                <td data-label="@Model.Columns[i].Header" class="@(Model.Columns[i].Numeric ? "text-end num" : "")">@(i < row.Count ? row[i].Text : "")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Totals != null)
+                {
+                    <tfoot>
+                        <tr class="fw-bold">
+                            @for (var i = 0; i < Model.Columns.Count; i++)
+                            {
+                                <td data-label="@Model.Columns[i].Header" class="@(Model.Columns[i].Numeric ? "text-end num" : "")">@(i < Model.Totals.Count ? Model.Totals[i].Text : "")</td>
+                            }
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+    }
+
+    @if (Model.Notes.Any())
+    {
+        <div class="card-footer">
+            @foreach (var note in Model.Notes)
+            {
+                <p class="small text-muted mb-1"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>@note</p>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/js/charts.js" asp-append-version="true"></script>
+}

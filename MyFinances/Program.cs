@@ -165,6 +165,7 @@ builder.Services.AddScoped<NetWorthService>();
 builder.Services.AddScoped<ReminderService>();
 builder.Services.AddScoped<MyFinances.Services.Reporting.Analytics>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<MyFinances.Services.Reporting.ReportService>();
 builder.Services.AddHostedService<ReminderEmailWorker>();
 
 builder.Services.AddHttpClient();
@@ -219,6 +220,8 @@ builder.Services.AddRazorPages(options =>
 });
 
 var app = builder.Build();
+
+MyFinances.Services.Reporting.DocumentFonts.Register(app.Environment, app.Logger);
 
 using (var scope = app.Services.CreateScope())
 {

@@ -193,6 +193,7 @@
     <section class="panel span-4" aria-labelledby="share-title">
         <div class="panel-header">
             <h2 class="panel-title" id="share-title">Spending breakdown</h2>
+            <a class="panel-link" asp-controller="Reports" asp-action="Show" asp-route-id="spending-by-category" asp-route-from="@Model.Range.Start.ToString("yyyy-MM-dd")" asp-route-to="@Model.Range.End.ToString("yyyy-MM-dd")">Details</a>
         </div>
         <div class="panel-body">
             @if (shareTotal == 0)

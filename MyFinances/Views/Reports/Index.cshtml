@@ -1,0 +1,25 @@
+@model IReadOnlyList<MyFinances.Services.Reporting.ReportDefinition>
+@{
+    ViewData["Title"] = "Reports & analytics";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Reports &amp; analytics</h1>
+        <p class="page-lede">Every report is worked out from your own records, can be filtered by date, and downloads as CSV or PDF with exactly the figures shown.</p>
+    </div>
+</div>
+
+<div class="settings-grid">
+    @foreach (var r in Model)
+    {
+        <a class="settings-item" asp-action="Show" asp-route-id="@r.Key">
+            <span class="settings-icon"><i class="bi bi-@r.Icon" aria-hidden="true"></i></span>
+            <span class="settings-text">
+                <span class="settings-title">@r.Title</span>
+                <span class="settings-note">@r.Description</span>
+            </span>
+            <i class="bi bi-chevron-right settings-chevron" aria-hidden="true"></i>
+        </a>
+    }
+</div>
