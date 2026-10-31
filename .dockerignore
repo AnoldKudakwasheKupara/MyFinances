@@ -1,8 +1,11 @@
 .git/
 .vs/
 .claude/
+.config/
 **/bin/
 **/obj/
 **/App_Data/
 **/*.user
 **/appsettings.Development.json
+MyFinances.Tests/
+docs/

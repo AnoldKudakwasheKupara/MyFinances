@@ -82,9 +82,11 @@ Enums are stored as text so the database stays readable.
 | `Assets` | `Kind` (Asset/Liability), `Name`, `Category`, `Currency`, `AcquiredOn`, `Notes` | |
 | `AssetValuations` | `AssetId`, `Date`, `Value` | current value = latest valuation |
 
-Foreign keys from the ledger to accounts and categories are `Restrict`:
-an account or category with history cannot be deleted, only archived or
-deactivated. Child rows (contributions, payments, valuations) cascade
+Foreign keys from the ledger to accounts and categories are `NO ACTION`
+and the services refuse the delete: an account or category with history
+cannot be deleted, only archived or deactivated. (`RESTRICT` would also
+block closing a whole user account, which removes everything in one
+statement.) Child rows (contributions, payments, valuations) cascade
 from their parent, and their linked ledger rows are removed in the same
 database transaction by the owning service.
 
