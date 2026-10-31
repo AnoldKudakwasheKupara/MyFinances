@@ -1,0 +1,22 @@
+@model MyFinances.Services.BudgetStatus
+@using MyFinances.Services
+@{
+    var s = Model;
+    var meter = s.State switch
+    {
+        BudgetState.Over => "is-over",
+        BudgetState.Warning => "is-warning",
+        _ => ""
+    };
+    var width = Math.Min(100, Math.Max(0, s.Percent));
+}
+
+<div class="meter @meter" role="progressbar" aria-valuenow="@((int)s.Percent)" aria-valuemin="0" aria-valuemax="100" aria-label="@s.Budget.Name used">
+    <span style="width:@(width.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span>
+</div>
+<div class="meter-row">
+    <span class="num">@Money.Format(s.Spent, s.Budget.Currency) of @Money.Format(s.Budget.Amount, s.Budget.Currency)</span>
+    <span class="num @(s.State == BudgetState.Over ? "text-danger fw-semibold" : "")">
+        @(s.Remaining >= 0 ? Money.Format(s.Remaining, s.Budget.Currency) + " left" : Money.Format(-s.Remaining, s.Budget.Currency) + " over")
+    </span>
+</div>

@@ -1,0 +1,69 @@
+@model BudgetDetailsViewModel
+@using MyFinances.Services
+@{
+    var b = Model.Budget;
+    ViewData["Title"] = b.Name;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Budgets", Url.Action("Index")!) };
+    var current = Model.History.FirstOrDefault();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@b.Name</h1>
+        <p class="page-lede">
+            @Money.Format(b.Amount, b.Currency) @b.Period.ToString().ToLower() for <strong>@b.Category?.Name</strong>,
+            from @b.StartDate.ToString("d MMM yyyy")@(b.EndDate != null ? " to " + b.EndDate.Value.ToString("d MMM yyyy") : "").
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-controller="Transactions" asp-action="Index" asp-route-categoryId="@b.CategoryId" asp-route-type="Expense" asp-route-from="@current?.Window.Start.ToString("yyyy-MM-dd")" asp-route-to="@current?.Window.End.ToString("yyyy-MM-dd")"><i class="bi bi-list-ul" aria-hidden="true"></i> Spending</a>
+        <a class="btn btn-light" asp-action="Edit" asp-route-id="@b.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <form asp-action="Delete" asp-route-id="@b.Id" method="post" class="d-inline" data-confirm="Delete the @b.Name budget? Your transactions stay as they are.">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+@if (current != null)
+{
+    <div class="stat-grid">
+        <div class="stat-card is-hero">
+            <div class="stat-top"><span class="stat-label">This period</span><span class="stat-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></span></div>
+            <div class="stat-value num">@current.Percent.ToString("0")% used</div>
+            <div class="stat-note">@current.Window.Start.ToString("d MMM") – @current.Window.End.ToString("d MMM yyyy")</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-top"><span class="stat-label">Spent</span></div>
+            <div class="stat-value num">@Money.Format(current.Spent, b.Currency)</div>
+            <div class="stat-note">of @Money.Format(b.Amount, b.Currency)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-top"><span class="stat-label">@(current.Remaining >= 0 ? "Remaining" : "Over by")</span></div>
+            <div class="stat-value num @(current.Remaining < 0 ? "text-danger" : "")">@Money.Format(Math.Abs(current.Remaining), b.Currency)</div>
+            <div class="stat-note">@((current.Window.End.DayNumber - UserPreferences.Today.DayNumber) is var d && d >= 0 ? $"{d} day(s) to go" : "Period ended")</div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header"><span class="panel-title">Period by period</span><span class="panel-note">Budget line at 100%</span></div>
+    @if (!Model.History.Any())
+    {
+        <div class="empty-state is-compact"><div class="empty-title">This budget has not started yet</div></div>
+    }
+    else
+    {
+        <ul class="list-rows">
+            @foreach (var h in Model.History)
+            {
+                <li class="list-row">
+                    <div style="width:130px" class="flex-shrink-0">
+                        <div class="list-row-title">@h.Window.Start.ToString(b.Period == BudgetPeriod.Monthly ? "MMMM yyyy" : "MMM yyyy")</div>
+                        <div class="list-row-sub">@h.Percent.ToString("0")%</div>
+                    </div>
+                    <div class="list-row-main"><partial name="_BudgetMeter" model="h" /></div>
+                </li>
+            }
+        </ul>
+    }
+</div>

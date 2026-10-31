@@ -1,0 +1,75 @@
+@model BudgetFormViewModel
+@using MyFinances.Services
+@{
+    var editing = Model.Id != null;
+    ViewData["Title"] = editing ? "Edit budget" : "New budget";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Budgets", Url.Action("Index")!) };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@ViewData["Title"]</h1>
+        <p class="page-lede">Spending in the category is counted against this amount every period. Spending in other currencies is converted at the rate of its own date.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" class="form-select" required>
+                        <option value="">Choose an expense category</option>
+                        @foreach (var c in Model.Categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.CategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" placeholder="Defaults to the category name" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control num" type="number" step="0.01" min="0.01" value="@(Model.Amount == 0 ? "" : Model.Amount.ToString("0.00"))" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label"></label>
+                    <select asp-for="Currency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Currency)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Period" class="form-label"></label>
+                    <select asp-for="Period" class="form-select" asp-items="EnumText.Options<BudgetPeriod>(Model.Period)"></select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" class="form-control" type="date" />
+                    <div class="form-text">Periods run from the first of this month.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="EndDate" class="form-label"></label>
+                    <input asp-for="EndDate" class="form-control" type="date" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a class="btn btn-light" href="@(editing ? Url.Action("Details", new { id = Model.Id }) : Url.Action("Index"))">Cancel</a>
+                <button class="btn btn-primary" type="submit">@(editing ? "Save changes" : "Create budget")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

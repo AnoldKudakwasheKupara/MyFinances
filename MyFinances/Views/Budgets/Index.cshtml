@@ -1,0 +1,86 @@
+@model BudgetsIndexViewModel
+@using MyFinances.Services
+@{
+    ViewData["Title"] = "Budgets";
+    var month = Model.Month;
+    var isCurrent = month == Periods.MonthStart(UserPreferences.Today);
+    var over = Model.Budgets.Count(b => b.State == BudgetState.Over);
+    var warning = Model.Budgets.Count(b => b.State == BudgetState.Warning);
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Budgets</h1>
+        <p class="page-lede">
+            Limits on what you spend by category. They turn amber at @Model.Settings.BudgetWarningPercent% and red at @Model.Settings.BudgetLimitPercent%.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> New budget</a>
+    </div>
+</div>
+
+@if (!Model.AnyBudgets)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></div>
+            <div class="empty-title">Set your first budget</div>
+            <p class="empty-text">Pick a category such as groceries or transport and how much you mean to spend on it each month.</p>
+            <a class="btn btn-primary" asp-action="Create">New budget</a>
+        </div>
+    </div>
+    return;
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <a class="btn btn-sm btn-light" asp-route-month="@month.AddMonths(-1).ToString("yyyy-MM")" aria-label="Previous month"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+        <h2 class="h6 fw-bold mb-0 px-2">@month.ToString("MMMM yyyy")</h2>
+        <a class="btn btn-sm btn-light" asp-route-month="@month.AddMonths(1).ToString("yyyy-MM")" aria-label="Next month"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+        @if (!isCurrent)
+        {
+            <a class="btn btn-sm btn-link" asp-action="Index">This month</a>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        @if (over > 0)
+        {
+            <span class="status-pill tone-rose">@over over</span>
+        }
+        @if (warning > 0)
+        {
+            <span class="status-pill tone-amber">@warning near the limit</span>
+        }
+    </div>
+</div>
+
+@if (!Model.Budgets.Any())
+{
+    <div class="card"><div class="empty-state is-compact"><div class="empty-title">No budgets were running in @month.ToString("MMMM yyyy")</div></div></div>
+}
+
+<div class="account-grid">
+    @foreach (var s in Model.Budgets)
+    {
+        <a class="account-card" asp-action="Details" asp-route-id="@s.Budget.Id">
+            <div class="account-card-top">
+                <span class="cat-icon @(s.State == BudgetState.Over ? "tone-rose" : s.State == BudgetState.Warning ? "tone-amber" : "tone-teal")">
+                    <i class="bi bi-@(s.Budget.Category?.Icon ?? "tag")" aria-hidden="true"></i>
+                </span>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="list-row-title">@s.Budget.Name</div>
+                    <div class="list-row-sub">@s.Budget.Period · @s.Window.Start.ToString("d MMM") – @s.Window.End.ToString("d MMM")</div>
+                </div>
+                <span class="fw-bold num">@s.Percent.ToString("0")%</span>
+            </div>
+            <div>
+                <partial name="_BudgetMeter" model="s" />
+                @if (s.Unconverted > 0)
+                {
+                    <div class="form-text mt-1"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> @s.Unconverted expense(s) in another currency have no rate and are not counted.</div>
+                }
+            </div>
+        </a>
+    }
+</div>
