@@ -1,0 +1,164 @@
+@model GoalDetailsViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    var p = Model.Progress;
+    var g = p.Goal;
+    ViewData["Title"] = g.Name;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Savings goals", Url.Action("Index")!) };
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div class="d-flex align-items-center gap-3">
+        <span class="cat-icon tone-teal" style="width:48px;height:48px;font-size:1.3rem;border-radius:14px"><i class="bi bi-@g.Icon" aria-hidden="true"></i></span>
+        <div>
+            <h1 class="page-heading">@g.Name</h1>
+            <p class="page-lede mt-1">
+                <span class="status-pill @(g.Status == GoalStatus.Achieved ? "tone-green" : g.Status == GoalStatus.Active ? "tone-teal" : "tone-slate")">@g.Status</span>
+                @if (g.Account != null)
+                {
+                    <span class="ms-1">Kept in <a asp-controller="Accounts" asp-action="Details" asp-route-id="@g.AccountId">@g.Account.Name</a></span>
+                }
+            </p>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Edit" asp-route-id="@g.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <form asp-action="Delete" asp-route-id="@g.Id" method="post" class="d-inline" data-confirm="Delete the @g.Name goal and its history?">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(g.Description))
+{
+    <p class="text-muted">@g.Description</p>
+}
+
+<div class="stat-grid">
+    <div class="stat-card is-hero">
+        <div class="stat-top"><span class="stat-label">Saved</span><span class="stat-icon"><i class="bi bi-piggy-bank" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(p.Saved, g.Currency)</div>
+        <div class="stat-note">@p.Percent.ToString("0.#")% of @Money.Format(g.TargetAmount, g.Currency)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Still to save</span></div>
+        <div class="stat-value num">@Money.Format(p.Remaining, g.Currency)</div>
+        <div class="stat-note">@(g.TargetDate == null ? "No target date" : "Target " + Preferences.Date(g.TargetDate))</div>
+    </div>
+    @if (p.MonthlyNeeded != null)
+    {
+        <div class="stat-card">
+            <div class="stat-top"><span class="stat-label">Needed each month</span></div>
+            <div class="stat-value num">@Money.Format(p.MonthlyNeeded.Value, g.Currency)</div>
+            <div class="stat-note">to reach it on time</div>
+        </div>
+    }
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">History</span><span class="panel-note">@Model.Contributions.Count entr@(Model.Contributions.Count == 1 ? "y" : "ies")</span></div>
+            @if (!Model.Contributions.Any())
+            {
+                <div class="empty-state is-compact"><div class="empty-title">Nothing put aside yet</div><p class="empty-text">Add your first contribution alongside.</p></div>
+            }
+            else
+            {
+                <ul class="list-rows">
+                    @foreach (var c in Model.Contributions)
+                    {
+                        var transfer = c.Transactions.FirstOrDefault();
+                        <li class="list-row">
+                            <span class="cat-icon @(c.Amount >= 0 ? "tone-green" : "tone-rose")"><i class="bi bi-@(c.Amount >= 0 ? "plus-lg" : "dash-lg")" aria-hidden="true"></i></span>
+                            <div class="list-row-main">
+                                <span class="list-row-title">@(c.Amount >= 0 ? "Contribution" : "Withdrawal")</span>
+                                <span class="list-row-sub">
+                                    @Preferences.Date(c.Date)
+                                    @if (transfer != null)
+                                    {
+                                        <span>· transfer @transfer.Account?.Name → @transfer.ToAccount?.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span>· earmarked, no money moved</span>
+                                    }
+                                    @if (c.Notes != null)
+                                    {
+                                        <span>· @c.Notes</span>
+                                    }
+                                </span>
+                            </div>
+                            <div class="list-row-end d-flex align-items-center gap-2">
+                                <span class="amount num @(c.Amount >= 0 ? "in" : "out")">@Money.Signed(c.Amount, g.Currency)</span>
+                                <form asp-action="RemoveContribution" method="post" data-confirm="Remove this entry@(transfer != null ? " and its transfer" : "")?">
+                                    <input type="hidden" name="id" value="@g.Id" />
+                                    <input type="hidden" name="contributionId" value="@c.Id" />
+                                    <button class="btn btn-sm btn-light" type="submit" aria-label="Remove entry"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                                </form>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Add or withdraw</span></div>
+            <div class="card-body">
+                <form asp-action="Contribute" asp-route-id="@g.Id" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="type-switch mb-3" style="grid-template-columns: repeat(2, 1fr)">
+                        <input type="radio" name="Form.Withdraw" id="w-add" value="false" checked="@(!Model.Form.Withdraw)" />
+                        <label for="w-add" class="is-income"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add</label>
+                        <input type="radio" name="Form.Withdraw" id="w-take" value="true" checked="@Model.Form.Withdraw" />
+                        <label for="w-take" class="is-expense"><i class="bi bi-dash-lg" aria-hidden="true"></i> Withdraw</label>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label asp-for="Form.Amount" class="form-label">Amount (@g.Currency)</label>
+                            <input asp-for="Form.Amount" class="form-control num" type="number" step="0.01" min="0.01" value="@(Model.Form.Amount == 0 ? "" : Model.Form.Amount.ToString("0.00"))" />
+                            <span asp-validation-for="Form.Amount" class="text-danger"></span>
+                        </div>
+                        <div class="col-5">
+                            <label asp-for="Form.Date" class="form-label">Date</label>
+                            <input asp-for="Form.Date" class="form-control" type="date" />
+                        </div>
+                    </div>
+
+                    @if (g.AccountId != null)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Form.OtherAccountId" class="form-label">Move the money</label>
+                            <select asp-for="Form.OtherAccountId" class="form-select">
+                                <option value="">Already in @g.Account?.Name — just earmark it</option>
+                                @foreach (var a in Model.Accounts)
+                                {
+                                    <option value="@a.Id" selected="@(a.Id == Model.Form.OtherAccountId)">Between @a.Name and @g.Account?.Name</option>
+                                }
+                            </select>
+                            <div class="form-text">Picking an account records a transfer, so balances follow and nothing counts as income.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="form-text">This goal has no account of its own, so contributions earmark money you already have; no money moves.</p>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Notes" class="form-label">Notes</label>
+                        <input asp-for="Form.Notes" class="form-control" />
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

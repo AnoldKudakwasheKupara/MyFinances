@@ -1,0 +1,68 @@
+@model List<MyFinances.Services.GoalProgress>
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    ViewData["Title"] = "Savings goals";
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Savings goals</h1>
+        <p class="page-lede">Money you are putting aside for something. Contributions are never counted as new income.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> New goal</a>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-piggy-bank" aria-hidden="true"></i></div>
+            <div class="empty-title">What are you saving for?</div>
+            <p class="empty-text">Pick one to start, or make your own.</p>
+            <div class="quick-actions justify-content-center mb-0">
+                @foreach (var (icon, example) in GoalFormViewModel.Ideas)
+                {
+                    <a class="quick-action" asp-action="Create" asp-route-idea="@example"><span class="cat-icon tone-teal"><i class="bi bi-@icon" aria-hidden="true"></i></span>@example</a>
+                }
+            </div>
+        </div>
+    </div>
+    return;
+}
+
+<div class="account-grid">
+    @foreach (var p in Model)
+    {
+        var g = p.Goal;
+        var done = g.Status == GoalStatus.Achieved;
+
+        <a class="account-card @(g.Status is GoalStatus.Cancelled or GoalStatus.Paused ? "is-archived" : "")" asp-action="Details" asp-route-id="@g.Id">
+            <div class="account-card-top">
+                <span class="cat-icon @(done ? "tone-green" : "tone-teal")"><i class="bi bi-@g.Icon" aria-hidden="true"></i></span>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="list-row-title">@g.Name</div>
+                    <div class="list-row-sub">@(g.TargetDate == null ? "No target date" : "By " + Preferences.Date(g.TargetDate))</div>
+                </div>
+                @if (g.Status != GoalStatus.Active)
+                {
+                    <span class="status-pill @(done ? "tone-green" : "tone-slate")">@g.Status</span>
+                }
+            </div>
+            <div>
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                    <span class="account-balance num">@Money.Format(p.Saved, g.Currency)</span>
+                    <span class="fw-bold num">@p.Percent.ToString("0")%</span>
+                </div>
+                <div class="meter @(done ? "is-done" : "")"><span style="width:@(Math.Min(100, p.Percent).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+                <div class="meter-row">
+                    <span>of @Money.Format(g.TargetAmount, g.Currency)</span>
+                    <span>@(p.Remaining > 0 ? Money.Format(p.Remaining, g.Currency) + " to go" : "Reached")</span>
+                </div>
+            </div>
+        </a>
+    }
+</div>

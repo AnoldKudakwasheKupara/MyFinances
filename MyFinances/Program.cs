@@ -158,6 +158,7 @@ builder.Services.AddSingleton<ReceiptStorage>();
 builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<TransactionSearch>();
 builder.Services.AddScoped<BudgetService>();
+builder.Services.AddScoped<GoalService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<EmailService>();
