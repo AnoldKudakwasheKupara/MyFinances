@@ -1,0 +1,174 @@
+@model TransactionsIndexViewModel
+@using MyFinances.Services
+@{
+    ViewData["Title"] = "Transactions";
+    ViewData["Filter"] = Model.Filter;
+    var f = Model.Filter;
+    var results = Model.Results;
+
+    string PageUrl(int page) =>
+        Url.Action("Index", f.RouteValues(page: page).Where(v => v.Value != null).ToDictionary(v => v.Key, v => (object?)v.Value))!;
+
+    var exportUrl = Url.Action("Export", f.RouteValues(page: 1).Where(v => v.Value != null && v.Key != "page").ToDictionary(v => v.Key, v => (object?)v.Value));
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Transactions</h1>
+        <p class="page-lede">Everything that came in, went out or moved between your accounts.</p>
+    </div>
+    <div class="page-actions">
+        @if (results.TotalCount > 0)
+        {
+            <a class="btn btn-light" href="@exportUrl"><i class="bi bi-download" aria-hidden="true"></i> Export CSV</a>
+        }
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add transaction</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="filter-bar" role="search" aria-label="Filter transactions">
+            <div style="grid-column: span 2">
+                <label class="form-label" for="q">Search</label>
+                <input class="form-control" id="q" name="q" value="@f.Q" placeholder="Description, notes or category" />
+            </div>
+            <div>
+                <label class="form-label" for="from">From</label>
+                <input class="form-control" id="from" name="from" type="date" value="@f.From?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label class="form-label" for="to">To</label>
+                <input class="form-control" id="to" name="to" type="date" value="@f.To?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div>
+                <label class="form-label" for="accountId">Account</label>
+                <select class="form-select" id="accountId" name="accountId">
+                    <option value="">All accounts</option>
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <option value="@a.Id" selected="@(a.Id == f.AccountId)">@a.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="categoryId">Category</label>
+                <select class="form-select" id="categoryId" name="categoryId">
+                    <option value="">All categories</option>
+                    @foreach (var group in Model.Categories.GroupBy(c => c.Kind))
+                    {
+                        <optgroup label="@group.Key">
+                            @foreach (var c in group)
+                            {
+                                <option value="@c.Id" selected="@(c.Id == f.CategoryId)">@c.Name</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="type">Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All types</option>
+                    @foreach (var type in Enum.GetValues<TransactionType>())
+                    {
+                        <option value="@type" selected="@(type == f.Type)">@type.Text()</option>
+                    }
+                </select>
+            </div>
+            <input type="hidden" name="sort" value="@f.Sort" />
+            @if (f.Asc)
+            {
+                <input type="hidden" name="asc" value="true" />
+            }
+            <div class="filter-actions">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-funnel" aria-hidden="true"></i> Filter</button>
+                @if (f.IsFiltered)
+                {
+                    <a class="btn btn-light" asp-action="Index">Clear</a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (results.TotalCount > 0)
+{
+    <div class="summary-grid mb-3 card overflow-hidden">
+        <div class="summary-item">
+            <div class="summary-label">Transactions</div>
+            <div class="summary-value num">@results.TotalCount.ToString("N0")</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">Income (@Model.ReportingCurrency)</div>
+            <div class="summary-value num text-success">@Money.Format(Model.TotalIn, Model.ReportingCurrency)</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">Expenses (@Model.ReportingCurrency)</div>
+            <div class="summary-value num" style="color:var(--expense)">@Money.Format(Model.TotalOut, Model.ReportingCurrency)</div>
+        </div>
+        <div class="summary-item">
+            <div class="summary-label">Net</div>
+            <div class="summary-value num">@Money.Signed(Model.TotalIn - Model.TotalOut, Model.ReportingCurrency)</div>
+        </div>
+    </div>
+
+    @if (Model.Unconverted > 0)
+    {
+        <div class="alert alert-warning" role="status">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>
+                @Model.Unconverted income or expense row(s) here have no exchange rate to @Model.ReportingCurrency and are left out of these totals.
+                <a asp-controller="ExchangeRates" asp-action="Index">Record a rate</a>.
+            </span>
+        </div>
+    }
+}
+
+<div class="card">
+    @if (results.TotalCount == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-receipt" aria-hidden="true"></i></div>
+            @if (f.IsFiltered)
+            {
+                <div class="empty-title">Nothing matches these filters</div>
+                <p class="empty-text">Try a wider date range or fewer filters.</p>
+                <a class="btn btn-light" asp-action="Index">Clear filters</a>
+            }
+            else if (!Model.HasAccounts)
+            {
+                <div class="empty-title">Add an account first</div>
+                <p class="empty-text">Transactions are recorded against an account, so start with where your money is.</p>
+                <a class="btn btn-primary" asp-controller="Accounts" asp-action="Create">Add account</a>
+            }
+            else
+            {
+                <div class="empty-title">No transactions yet</div>
+                <p class="empty-text">Record your first income or expense and your balances and reports will follow.</p>
+                <a class="btn btn-primary" asp-action="Create">Add transaction</a>
+            }
+        </div>
+    }
+    else
+    {
+        <partial name="_TransactionTable" model="results.Items" view-data="ViewData" />
+
+        @if (results.IsPaged)
+        {
+            <div class="card-footer pager">
+                <span>Page @results.Page of @results.TotalPages · @results.TotalCount.ToString("N0") transactions</span>
+                <div class="d-flex gap-2">
+                    @if (results.HasPrevious)
+                    {
+                        <a class="btn btn-sm btn-light" href="@PageUrl(results.Page - 1)"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</a>
+                    }
+                    @if (results.HasNext)
+                    {
+                        <a class="btn btn-sm btn-light" href="@PageUrl(results.Page + 1)">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>

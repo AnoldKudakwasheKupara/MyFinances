@@ -25,6 +25,8 @@
         </div>
     </div>
     <div class="page-actions">
+        <a class="btn btn-primary" asp-controller="Transactions" asp-action="Create" asp-route-accountId="@account.Id"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add transaction</a>
+        <a class="btn btn-light" asp-controller="Transactions" asp-action="Index" asp-route-accountId="@account.Id"><i class="bi bi-list-ul" aria-hidden="true"></i> All activity</a>
         <a class="btn btn-light" asp-action="Edit" asp-route-id="@account.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
         <form asp-action="Archive" asp-route-id="@account.Id" method="post" class="d-inline">
             <input type="hidden" name="archived" value="@(!account.IsArchived)" />

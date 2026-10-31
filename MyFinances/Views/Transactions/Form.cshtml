@@ -1,0 +1,170 @@
+@model TransactionFormViewModel
+@using MyFinances.Services
+@{
+    var editing = Model.Id != null;
+    ViewData["Title"] = editing ? "Edit transaction" : "Add transaction";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Transactions", Url.Action("Index")!) };
+
+    var types = new[]
+    {
+        (TransactionType.Expense, "is-expense", "arrow-up-right", "Expense"),
+        (TransactionType.Income, "is-income", "arrow-down-left", "Income"),
+        (TransactionType.Transfer, "is-transfer", "arrow-left-right", "Transfer")
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@ViewData["Title"]</h1>
+        <p class="page-lede">Money in, money out, or a move between your own accounts. Transfers are never counted as income or spending.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+
+        <form method="post" enctype="multipart/form-data" id="transaction-form">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <fieldset class="mb-4">
+                <legend class="visually-hidden">Type</legend>
+                <div class="type-switch">
+                    @foreach (var (type, css, icon, label) in types)
+                    {
+                        var id = "type-" + type;
+                        <input type="radio" name="Type" id="@id" value="@type" checked="@(Model.Type == type)" data-type-switch />
+                        <label for="@id" class="@css"><i class="bi bi-@icon" aria-hidden="true"></i> @label</label>
+                    }
+                </div>
+                <span asp-validation-for="Type" class="text-danger"></span>
+            </fieldset>
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <label asp-for="Amount" class="form-label">
+                        <span data-show-for="Expense,Income">Amount</span>
+                        <span data-show-for="Transfer">Amount sent</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text" data-currency-of="AccountId">—</span>
+                        <input asp-for="Amount" class="form-control num" type="number" step="0.01" min="0.01" inputmode="decimal" value="@(Model.Amount == 0 ? "" : Model.Amount.ToString("0.00"))" autofocus />
+                    </div>
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Date" class="form-label"></label>
+                    <input asp-for="Date" class="form-control" type="date" />
+                    <span asp-validation-for="Date" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <input asp-for="Description" class="form-control" placeholder="e.g. Groceries at OK Mart" autocomplete="off" />
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="AccountId" class="form-label">
+                        <span data-show-for="Expense">Paid from</span>
+                        <span data-show-for="Income">Paid into</span>
+                        <span data-show-for="Transfer">From account</span>
+                    </label>
+                    <select asp-for="AccountId" class="form-select" data-account-select>
+                        <option value="">Choose an account</option>
+                        @foreach (var a in Model.Accounts)
+                        {
+                            <option value="@a.Id" data-currency="@a.Currency" selected="@(a.Id == Model.AccountId)">@a.Name (@a.Currency)@(a.IsArchived ? " — archived" : "")</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AccountId" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6" data-show-for="Expense">
+                    <label asp-for="ExpenseCategoryId" class="form-label"></label>
+                    <select asp-for="ExpenseCategoryId" class="form-select">
+                        <option value="">Choose a category</option>
+                        @foreach (var c in Model.ExpenseCategories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.ExpenseCategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-6" data-show-for="Income">
+                    <label asp-for="IncomeCategoryId" class="form-label"></label>
+                    <select asp-for="IncomeCategoryId" class="form-select">
+                        <option value="">Choose a category</option>
+                        @foreach (var c in Model.IncomeCategories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.IncomeCategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-6" data-show-for="Transfer">
+                    <label asp-for="ToAccountId" class="form-label"></label>
+                    <select asp-for="ToAccountId" class="form-select" data-account-select>
+                        <option value="">Choose an account</option>
+                        @foreach (var a in Model.Accounts)
+                        {
+                            <option value="@a.Id" data-currency="@a.Currency" selected="@(a.Id == Model.ToAccountId)">@a.Name (@a.Currency)@(a.IsArchived ? " — archived" : "")</option>
+                        }
+                    </select>
+                    <span asp-validation-for="ToAccountId" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6" data-show-for="Transfer" data-cross-currency hidden>
+                    <label asp-for="ToAmount" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text" data-currency-of="ToAccountId">—</span>
+                        <input asp-for="ToAmount" class="form-control num" type="number" step="0.01" min="0.01" inputmode="decimal" />
+                    </div>
+                    <div class="form-text" data-rate-hint>The two accounts use different currencies, so enter what arrived. The rate is recorded with the transfer.</div>
+                    <span asp-validation-for="ToAmount" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Optional"></textarea>
+                    <span asp-validation-for="Notes" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Receipt" class="form-label"></label>
+                    @if (Model.ExistingReceiptName != null)
+                    {
+                        <div class="d-flex align-items-center gap-3 mb-2 small">
+                            <span><i class="bi bi-paperclip" aria-hidden="true"></i> @Model.ExistingReceiptName</span>
+                            <div class="form-check mb-0">
+                                <input asp-for="RemoveReceipt" class="form-check-input" />
+                                <label asp-for="RemoveReceipt" class="form-check-label">Remove it</label>
+                            </div>
+                        </div>
+                    }
+                    <input asp-for="Receipt" class="form-control" type="file" accept="@ReceiptStorage.Accept" />
+                    <div class="form-text">Optional. PDF, JPG, PNG or WebP, up to 5 MB.@(Model.ExistingReceiptName != null ? " A new file replaces the current one." : "")</div>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <a class="btn btn-light" href="@(editing ? Url.Action("Details", new { id = Model.Id }) : Url.Action("Index"))">Cancel</a>
+                @if (!editing)
+                {
+                    <button type="submit" class="btn btn-light" name="next" value="another">Save and add another</button>
+                }
+                <button type="submit" class="btn btn-primary">@(editing ? "Save changes" : "Save")</button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/transaction-form.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,150 @@
+@model MyFinances.Entities.Transaction
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    var t = Model;
+    ViewData["Title"] = t.Description;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Transactions", Url.Action("Index")!) };
+    await Preferences.GetAsync();
+    var (effect, currency) = Display.Effect(t);
+}
+
+<div class="page-head">
+    <div class="d-flex align-items-center gap-3">
+        <span class="cat-icon @Display.TypeTone(t.Type)" style="width:48px;height:48px;font-size:1.3rem;border-radius:14px">
+            <i class="bi bi-@Display.TypeIcon(t.Type)" aria-hidden="true"></i>
+        </span>
+        <div>
+            <h1 class="page-heading">@t.Description</h1>
+            <p class="page-lede mt-1"><span class="status-pill @Display.TypeTone(t.Type)">@t.Type.Text()</span> on @Preferences.Date(t.Date)</p>
+        </div>
+    </div>
+    <div class="page-actions">
+        @if (!t.IsLinked)
+        {
+            <a class="btn btn-light" asp-action="Edit" asp-route-id="@t.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+            <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline"
+                  data-confirm="Delete this transaction? The account balance and your reports will update straight away.">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (t.IsLinked)
+{
+    <div class="alert alert-info" role="status">
+        <i class="bi bi-link-45deg" aria-hidden="true"></i>
+        <span>@LedgerService.LinkedMessage(t)</span>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="eyebrow mb-1">@(t.Type == TransactionType.Transfer ? "Amount sent" : "Amount")</div>
+                <div class="stat-value num mb-4 amount @Display.AmountClass(t, effect)">
+                    @(t.Type == TransactionType.Transfer ? Money.Format(t.Amount, t.Currency) : Money.Signed(effect, currency))
+                </div>
+
+                <dl class="detail-list">
+                    <dt>Date</dt>
+                    <dd>@Preferences.Date(t.Date)</dd>
+
+                    <dt>@(t.Type == TransactionType.Transfer ? "From" : "Account")</dt>
+                    <dd><a asp-controller="Accounts" asp-action="Details" asp-route-id="@t.AccountId">@t.Account?.Name</a> <span class="currency-tag">@t.Currency</span></dd>
+
+                    @if (t.Type == TransactionType.Transfer)
+                    {
+                        <dt>To</dt>
+                        <dd><a asp-controller="Accounts" asp-action="Details" asp-route-id="@t.ToAccountId">@t.ToAccount?.Name</a> <span class="currency-tag">@t.ToAccount?.Currency</span></dd>
+
+                        <dt>Received</dt>
+                        <dd class="num">@Money.Format(t.ToAmount ?? t.Amount, t.ToAccount?.Currency ?? t.Currency)</dd>
+
+                        @if (t.TransferRate != null)
+                        {
+                            <dt>Rate</dt>
+                            <dd class="num">1 @t.Currency = @t.TransferRate.Value.ToString("0.########") @t.ToAccount?.Currency</dd>
+                        }
+                    }
+                    else
+                    {
+                        <dt>Category</dt>
+                        <dd>
+                            @if (t.Category != null)
+                            {
+                                <i class="bi bi-@t.Category.Icon text-muted" aria-hidden="true"></i> @t.Category.Name
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </dd>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(t.Notes))
+                    {
+                        <dt>Notes</dt>
+                        <dd>@t.Notes</dd>
+                    }
+
+                    <dt>Recorded</dt>
+                    <dd>@t.CreatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+
+                    @if (t.UpdatedAt > t.CreatedAt.AddSeconds(1))
+                    {
+                        <dt>Last changed</dt>
+                        <dd>@t.UpdatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 d-flex flex-column gap-3">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">In your main currency</span></div>
+            <div class="card-body">
+                @if (t.Type == TransactionType.Transfer)
+                {
+                    <p class="text-muted small mb-0">Transfers move money between your own accounts, so they are not counted as income or spending.</p>
+                }
+                else if (t.ReportingCurrency == null || t.ReportingCurrency == t.Currency)
+                {
+                    <p class="text-muted small mb-0">Recorded in @t.Currency, your main currency, so no conversion is needed.</p>
+                }
+                else if (t.ReportingAmount == null)
+                {
+                    <p class="small mb-2">There was no @t.Currency → @t.ReportingCurrency rate on or before this date, so this is left out of totals in @t.ReportingCurrency.</p>
+                    <a class="btn btn-sm btn-light" asp-controller="ExchangeRates" asp-action="Index">Record a rate</a>
+                }
+                else
+                {
+                    <dl class="detail-list">
+                        <dt>Original</dt>
+                        <dd class="num">@Money.Format(t.Amount, t.Currency)</dd>
+                        <dt>Converted</dt>
+                        <dd class="num">@Money.Format(t.ReportingAmount.Value, t.ReportingCurrency.Value)</dd>
+                        <dt>Rate used</dt>
+                        <dd class="num">1 @t.Currency = @t.ReportingRate?.ToString("0.########") @t.ReportingCurrency</dd>
+                        <dt>Rate dated</dt>
+                        <dd>@Preferences.Date(t.ReportingRateDate)</dd>
+                    </dl>
+                }
+            </div>
+        </div>
+
+        @if (t.ReceiptPath != null)
+        {
+            <div class="card">
+                <div class="card-header"><span class="panel-title">Receipt</span></div>
+                <div class="card-body d-flex align-items-center justify-content-between gap-2">
+                    <span class="small text-truncate"><i class="bi bi-paperclip" aria-hidden="true"></i> @t.ReceiptFileName</span>
+                    <a class="btn btn-sm btn-light" asp-action="Receipt" asp-route-id="@t.Id" target="_blank" rel="noopener">Open</a>
+                </div>
+            </div>
+        }
+    </div>
+</div>

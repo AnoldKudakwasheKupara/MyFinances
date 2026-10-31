@@ -1,0 +1,90 @@
+@model IEnumerable<MyFinances.Entities.Transaction>
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    await Preferences.GetAsync();
+    var sortable = ViewData["Filter"] as TransactionFilter;
+
+    string SortLink(string key, string text)
+    {
+        if (sortable == null)
+            return text;
+
+        var asc = sortable.Sort == key ? !sortable.Asc : key != "date" && key != "amount";
+        var values = sortable.RouteValues(page: 1, sort: key, asc: asc);
+        var url = Url.Action("Index", "Transactions", values.Where(v => v.Value != null).ToDictionary(v => v.Key, v => (object?)v.Value));
+        var arrow = sortable.Sort == key ? (sortable.Asc ? " ↑" : " ↓") : "";
+
+        return $"<a class=\"table-sort{(sortable.Sort == key ? " is-sorted" : "")}\" href=\"{url}\">{text}{arrow}</a>";
+    }
+}
+
+<div class="table-responsive">
+    <table class="table table-hover table-stack">
+        <thead>
+            <tr>
+                <th>@Html.Raw(SortLink("date", "Date"))</th>
+                <th>@Html.Raw(SortLink("description", "Description"))</th>
+                <th>Category</th>
+                <th>Account</th>
+                <th>Type</th>
+                <th class="text-end">@Html.Raw(SortLink("amount", "Amount"))</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model)
+            {
+                var (effect, currency) = Display.Effect(t);
+                var signed = t.Type == TransactionType.Transfer
+                    ? Money.Format(effect, currency)
+                    : Money.Signed(effect, currency);
+
+                <tr>
+                    <td data-label="Date" class="text-nowrap">@Preferences.Date(t.Date)</td>
+                    <td data-label="Description">
+                        <a class="row-title" asp-controller="Transactions" asp-action="Details" asp-route-id="@t.Id">@t.Description</a>
+                        @if (t.ReceiptPath != null)
+                        {
+                            <i class="bi bi-paperclip text-muted" title="Has a receipt" aria-label="Has a receipt"></i>
+                        }
+                    </td>
+                    <td data-label="Category">
+                        @if (t.Category != null)
+                        {
+                            <span class="d-inline-flex align-items-center gap-2"><i class="bi bi-@t.Category.Icon text-muted" aria-hidden="true"></i>@t.Category.Name</span>
+                        }
+                        else if (t.Type == TransactionType.Transfer)
+                        {
+                            <span class="text-muted">Between accounts</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td data-label="Account">
+                        @t.Account?.Name
+                        @if (t.Type == TransactionType.Transfer)
+                        {
+                            <span class="row-sub">to @t.ToAccount?.Name</span>
+                        }
+                    </td>
+                    <td data-label="Type"><span class="status-pill @Display.TypeTone(t.Type)">@t.Type.Text()</span></td>
+                    <td data-label="Amount" class="text-end">
+                        <span class="amount num @Display.AmountClass(t, effect)">@signed</span>
+                        @if (t.Type == TransactionType.Transfer && t.ToAccount != null && t.ToAccount.Currency != t.Currency)
+                        {
+                            <span class="amount-sub">received @Money.Format(t.ToAmount ?? 0, t.ToAccount.Currency)</span>
+                        }
+                        else if (t.ReportingCurrency != null && t.ReportingCurrency != t.Currency)
+                        {
+                            <span class="amount-sub">
+                                @(t.ReportingAmount == null ? "no rate yet" : "≈ " + Money.Format(t.ReportingAmount.Value, t.ReportingCurrency.Value))
+                            </span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

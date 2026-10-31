@@ -1,1 +1,16 @@
-@* Tools in the top bar. Modules add to it as they arrive. *@
+<form class="topbar-search" role="search" method="get" action="@Url.Action("Index", "Transactions")">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label for="topbar-q" class="visually-hidden">Search transactions</label>
+    <input id="topbar-q" name="q" type="search" placeholder="Search transactions" value="@(ViewContext.RouteData.Values["controller"] as string == "Transactions" ? Context.Request.Query["q"].ToString() : "")" />
+</form>
+
+<div class="dropdown">
+    <button class="btn btn-primary quick-add" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i><span class="quick-add-label">Quick add</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" asp-controller="Transactions" asp-action="Create" asp-route-type="Expense"><i class="bi bi-arrow-up-right"></i> Expense</a></li>
+        <li><a class="dropdown-item" asp-controller="Transactions" asp-action="Create" asp-route-type="Income"><i class="bi bi-arrow-down-left"></i> Income</a></li>
+        <li><a class="dropdown-item" asp-controller="Transactions" asp-action="Create" asp-route-type="Transfer"><i class="bi bi-arrow-left-right"></i> Transfer</a></li>
+    </ul>
+</div>
