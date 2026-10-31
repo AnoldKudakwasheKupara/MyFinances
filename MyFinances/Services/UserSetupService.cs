@@ -89,16 +89,5 @@ namespace MyFinances.Services
 
             await _context.SaveChangesAsync();
         }
-
-        /// <summary>
-        /// Removes a person's ledger, the one table the database does not
-        /// clear when their sign-in is deleted. Run it in the same
-        /// database transaction as the delete.
-        /// </summary>
-        public Task<int> ClearLedgerAsync(int userId) =>
-            _context.Transactions
-                .IgnoreQueryFilters()
-                .Where(t => t.UserId == userId)
-                .ExecuteDeleteAsync();
     }
 }

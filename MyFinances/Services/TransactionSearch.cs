@@ -71,9 +71,9 @@ namespace MyFinances.Services
                 var pattern = "%" + filter.Q.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
 
                 query = query.Where(t =>
-                    EF.Functions.Like(t.Description, pattern, "\\") ||
-                    (t.Notes != null && EF.Functions.Like(t.Notes, pattern, "\\")) ||
-                    (t.Category != null && EF.Functions.Like(t.Category.Name, pattern, "\\")));
+                    EF.Functions.ILike(t.Description, pattern) ||
+                    (t.Notes != null && EF.Functions.ILike(t.Notes, pattern)) ||
+                    (t.Category != null && EF.Functions.ILike(t.Category.Name, pattern)));
             }
 
             if (filter.From != null)

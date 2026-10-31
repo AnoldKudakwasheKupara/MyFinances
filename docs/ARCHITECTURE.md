@@ -6,15 +6,16 @@ reports, in one place.
 
 It follows the approach of My Intellego (the `HrPortal` repository):
 one ASP.NET Core MVC project on .NET 10, ASP.NET Identity, EF Core,
-user secrets for local configuration, and migrations applied on
-startup. The database is Microsoft SQL Server, as the brief asked; the
-site is hosted on MonsterASP.NET (IIS on Windows with its own SQL
-Server), deployed by a GitHub Actions workflow over Web Deploy.
+PostgreSQL, a Docker image hosted on Render from a `render.yaml`
+blueprint, user secrets for local configuration, and migrations applied
+on startup. Both run on free plans that need no card: the web service
+on Render and the database on Neon.
 
 ## Deviations from the original brief
 
 | Brief | MyFinances | Why |
 | --- | --- | --- |
+| Microsoft SQL Server | PostgreSQL 16+ (Npgsql) | Same database setup as HrPortal, and the free host that works from Zimbabwe (Neon) offers PostgreSQL. EF Core keeps the code provider-neutral. |
 | Excel export | CSV (opens in Excel) and PDF | CSV covers spreadsheets without another dependency; PDF uses QuestPDF as HrPortal does. |
 | Email reminders | In-app reminders; email digest behind `Email:Enabled` | Email is off until a mail account is configured, as in HrPortal. |
 
@@ -22,7 +23,7 @@ Server), deployed by a GitHub Actions workflow over Web Deploy.
 
 ```
 MyFinances.slnx
-.github/workflows/deploy.yml      publish to MonsterASP.NET on every push to master
+Dockerfile, render.yaml           Render blueprint (web service; the database is on Neon)
 docs/                             this document
 MyFinances/                       the web application
   Controllers/                    thin MVC controllers
@@ -34,7 +35,7 @@ MyFinances/                       the web application
   ViewModels/                     form and screen models
   Views/, Areas/Identity/         Razor views, restyled Identity pages
   wwwroot/                        css, js, vendored libraries (Bootstrap, Bootstrap Icons, Chart.js, jQuery Validation)
-MyFinances.Tests/                 xUnit integration tests against a throwaway SQL Server database
+MyFinances.Tests/                 xUnit integration tests against a throwaway PostgreSQL database
 ```
 
 Controllers never calculate money. They call services
@@ -84,16 +85,11 @@ Enums are stored as text so the database stays readable.
 
 Foreign keys from the ledger to accounts and categories are `NO ACTION`
 and the services refuse the delete: an account or category with history
-cannot be deleted, only archived or deactivated. Child rows
-(contributions, payments, valuations) cascade from their parent, and
-their linked ledger rows are removed in the same database transaction
-by the owning service.
-
-SQL Server allows only one cascade path to a table, so only top-level
-tables cascade from the user; child tables go with their parent, and
-the ledger cascades from nothing. Closing an account therefore deletes
-the person's ledger and then their sign-in, in one database
-transaction, and everything else follows.
+cannot be deleted, only archived or deactivated. (`RESTRICT` would also
+block closing a whole user account, which removes everything in one
+statement.) Child rows (contributions, payments, valuations) cascade
+from their parent, and their linked ledger rows are removed in the same
+database transaction by the owning service.
 
 Indexes: (`UserId`, `Date`) and (`UserId`, `AccountId`) and
 (`UserId`, `CategoryId`) on `Transactions`; (`UserId`, `NextDueDate`) on
@@ -223,5 +219,3 @@ Each step is its own commit, pushed as it lands.
    multi-currency summaries.
 5. **Hardening and deployment** — tests, error handling, settings and data
    export, Docker and Render blueprint, README.
-6. **SQL Server and MonsterASP.NET** — the database moved to SQL Server
-   and hosting to MonsterASP.NET, deployed from GitHub Actions.

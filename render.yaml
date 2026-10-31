@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: myfinances
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    healthCheckPath: /Identity/Account/Login
+    envVars:
+      # The Neon database's connection string (postgresql://...?sslmode=require).
+      # Entered by hand in the dashboard; it never goes in the repository.
+      - key: DATABASE_URL
+        sync: false
+      # Render ends HTTPS at its proxy, so the app must read the
+      # forwarded scheme and visitor address.
+      - key: ForwardedHeaders__Enabled
+        value: "true"
+      - key: Registration__Enabled
+        value: "true"

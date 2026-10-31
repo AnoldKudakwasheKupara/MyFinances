@@ -140,17 +140,12 @@ namespace MyFinances.Tests
             var bobsBank = await bob.AccountAsync("Bob's bank", Currency.USD, 10);
             await bob.RecordAsync(TransactionType.Income, 5, bobsBank, "2026-02-01", "Salary");
 
-            // As the close-account page does it, in a fresh request: the
-            // ledger, then the sign-in, together.
+            // As the close-account page does it, in a fresh request:
+            // deleting the sign-in is the one statement that clears the rest.
             await using (var request = database.NewContext(alice.User))
             {
-                var setup = new UserSetupService(request, alice.User);
-                await request.InTransactionAsync(async () =>
-                {
-                    await setup.ClearLedgerAsync(alice.Id);
-                    request.Users.Remove(await request.Users.SingleAsync(u => u.Id == alice.Id));
-                    return await request.SaveChangesAsync();
-                });
+                request.Users.Remove(await request.Users.SingleAsync(u => u.Id == alice.Id));
+                await request.SaveChangesAsync();
             }
 
             alice.Db.ChangeTracker.Clear();

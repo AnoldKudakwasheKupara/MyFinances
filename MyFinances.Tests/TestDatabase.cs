@@ -1,17 +1,17 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MyFinances.Data;
+using MyFinances.Services;
+using Npgsql;
 
 namespace MyFinances.Tests
 {
     /// <summary>
-    /// A throwaway SQL Server database for the whole test run, made from
+    /// A throwaway PostgreSQL database for the whole test run, made from
     /// the same migrations as production and dropped at the end. The
     /// connection comes from MYFINANCES_TEST_DB, or else the web
-    /// project's connection string (user secrets, then appsettings.json)
-    /// with the database name swapped, so the real development data is
-    /// never touched.
+    /// project's user secrets with the database name swapped, so the
+    /// real development data is never touched.
     /// </summary>
     public sealed class TestDatabase : IAsyncLifetime
     {
@@ -20,21 +20,19 @@ namespace MyFinances.Tests
         public TestDatabase()
         {
             var configuration = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true)
                 .AddUserSecrets<TestDatabase>(optional: true)
                 .AddEnvironmentVariables()
                 .Build();
 
             var source = configuration["MYFINANCES_TEST_DB"]
-                ?? configuration.GetConnectionString("DefaultConnection")
+                ?? PostgresUrl.ToConnectionString(configuration.GetConnectionString("DefaultConnection"))
                 ?? throw new InvalidOperationException(
-                    "The tests need SQL Server. Set MYFINANCES_TEST_DB to a connection string whose login " +
-                    "can create databases, or set up the web project as described in README.md.");
+                    "The tests need PostgreSQL. Set MYFINANCES_TEST_DB to a connection string whose login " +
+                    "can create databases, or set the web project's user secret as described in README.md.");
 
-            var builder = new SqlConnectionStringBuilder(source)
+            var builder = new NpgsqlConnectionStringBuilder(source)
             {
-                InitialCatalog = $"myfinances_test_{Guid.NewGuid():N}"[..40]
+                Database = $"myfinances_test_{Guid.NewGuid():N}"[..40]
             };
 
             ConnectionString = builder.ConnectionString;
@@ -53,7 +51,7 @@ namespace MyFinances.Tests
         }
 
         public ApplicationDbContext NewContext(CurrentUser user) =>
-            new(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(ConnectionString).Options, user);
+            new(new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(ConnectionString).Options, user);
     }
 
     [CollectionDefinition(Name)]

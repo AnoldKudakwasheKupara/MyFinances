@@ -115,7 +115,9 @@ namespace MyFinances.Data
                 e.Property(t => t.ReceiptContentType).HasMaxLength(100);
 
                 // History must never lose its account or category; the
-                // services refuse to delete one that is in use.
+                // services refuse to delete one that is in use. NO ACTION
+                // rather than RESTRICT so closing a whole account, which
+                // removes everything in one statement, is still allowed.
                 e.HasOne(t => t.Account)
                     .WithMany()
                     .HasForeignKey(t => t.AccountId)
@@ -129,31 +131,28 @@ namespace MyFinances.Data
                     .HasForeignKey(t => t.CategoryId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // Rows another module wrote go when that record goes. The
-                // owning service removes them itself; SQL Server allows
-                // only one cascade path to a table, so the database does
-                // not.
+                // Rows another module wrote go when that record goes.
                 e.HasOne(t => t.BillPayment)
                     .WithMany(p => p.Transactions)
                     .HasForeignKey(t => t.BillPaymentId)
-                    .OnDelete(DeleteBehavior.ClientCascade);
+                    .OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(t => t.Debt)
                     .WithMany(d => d.Transactions)
                     .HasForeignKey(t => t.DebtId)
-                    .OnDelete(DeleteBehavior.ClientCascade);
+                    .OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(t => t.DebtPayment)
                     .WithMany(p => p.Transactions)
                     .HasForeignKey(t => t.DebtPaymentId)
-                    .OnDelete(DeleteBehavior.ClientCascade);
+                    .OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(t => t.GoalContribution)
                     .WithMany(c => c.Transactions)
                     .HasForeignKey(t => t.GoalContributionId)
-                    .OnDelete(DeleteBehavior.ClientCascade);
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 e.HasIndex(t => new { t.UserId, t.Date });
                 e.HasIndex(t => new { t.UserId, t.AccountId });
                 e.HasIndex(t => new { t.UserId, t.CategoryId });
-                Owned(e, cascade: false);
+                Owned(e);
             });
 
             builder.Entity<Budget>(e =>
@@ -188,7 +187,7 @@ namespace MyFinances.Data
                     .WithMany(g => g.Contributions)
                     .HasForeignKey(c => c.GoalId)
                     .OnDelete(DeleteBehavior.Cascade);
-                Owned(e, cascade: false);
+                Owned(e);
             });
 
             builder.Entity<Debt>(e =>
@@ -215,7 +214,7 @@ namespace MyFinances.Data
                     .WithMany()
                     .HasForeignKey(p => p.AccountId)
                     .OnDelete(DeleteBehavior.NoAction);
-                Owned(e, cascade: false);
+                Owned(e);
             });
 
             builder.Entity<Bill>(e =>
@@ -244,7 +243,7 @@ namespace MyFinances.Data
                     .HasForeignKey(p => p.BillId)
                     .OnDelete(DeleteBehavior.Cascade);
                 e.HasIndex(p => new { p.BillId, p.DueDate }).IsUnique();
-                Owned(e, cascade: false);
+                Owned(e);
             });
 
             builder.Entity<Holding>(e =>
@@ -263,7 +262,7 @@ namespace MyFinances.Data
                     .WithMany(h => h.Valuations)
                     .HasForeignKey(v => v.HoldingId)
                     .OnDelete(DeleteBehavior.Cascade);
-                Owned(e, cascade: false);
+                Owned(e);
             });
 
             builder.Entity<UserSettings>()
@@ -274,20 +273,14 @@ namespace MyFinances.Data
 
         /// <summary>
         /// Ties a table to its owner and hides everybody else's rows.
-        /// Child tables (payments, contributions, valuations) and the
-        /// ledger do not cascade from the owner: they already go with
-        /// their parent, and SQL Server refuses two cascade paths to one
-        /// table. Closing an account clears the ledger first.
         /// </summary>
-        private void Owned<T>(
-            Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T> e,
-            bool cascade = true)
+        private void Owned<T>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<T> e)
             where T : class, IUserOwned
         {
             e.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
-                .OnDelete(cascade ? DeleteBehavior.Cascade : DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
 
             e.HasQueryFilter(x => x.UserId == CurrentUserId);
         }
