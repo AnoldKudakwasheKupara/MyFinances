@@ -143,8 +143,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
-        builder.Environment.ContentRootPath, "App_Data", "keys")))
+    .PersistKeysToDbContext<ApplicationDbContext>()
     .SetApplicationName("MyFinances");
 
 builder.Services.AddScoped<CurrentUser>();

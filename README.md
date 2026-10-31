@@ -98,9 +98,28 @@ The migration is applied automatically the next time the app starts.
 ## Hosting on Render
 
 [`render.yaml`](render.yaml) describes everything: a Docker web service
-in Frankfurt built from the [`Dockerfile`](Dockerfile), a 5 GB disk on
-`App_Data` for receipts and the sign-in keys, and a PostgreSQL database
-whose address reaches the app as `DATABASE_URL`.
+in Frankfurt built from the [`Dockerfile`](Dockerfile) and a PostgreSQL
+database whose address reaches the app as `DATABASE_URL`. The sign-in
+keys are kept in the database, so restarts do not sign anyone out.
+
+Both run on Render's **free** plans, which have limits:
+
+- The web service sleeps after 15 minutes without visits; the next
+  visit takes about a minute to wake it.
+- There is no disk, so **uploaded receipts are lost** whenever the
+  service restarts or redeploys. Everything else is in the database.
+- A free database expires 30 days after it is created unless it is
+  upgraded, and has no backups.
+
+To move to paid plans, set `plan` to e.g. `starter` on the service and
+`basic-256mb` on the database, and give the service a disk:
+
+```yaml
+    disk:
+      name: app-data
+      mountPath: /app/App_Data
+      sizeGB: 5
+```
 
 In the Render dashboard choose **New → Blueprint**, pick this
 repository, and apply it. Every push to `master` redeploys. Render ends
@@ -134,8 +153,9 @@ need no confirmation, and reminders are shown in the app only.
 
   and restore into an empty database with
   `pg_restore --no-owner --dbname="<database URL>" myfinances.dump`.
-- **Files.** Receipts and the sign-in keys are on the service's disk;
-  Render snapshots disks daily. Losing the keys only signs everyone out.
+- **Files.** Receipts live under `App_Data/receipts`. On the free plan
+  that folder is wiped on every restart; with a disk, Render snapshots
+  it daily.
 - **Each person's own copy.** *Settings → Download all my data* gives a
   zip with every record as JSON, the ledger as CSV and all receipts.
 

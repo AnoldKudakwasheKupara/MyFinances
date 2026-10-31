@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,8 @@ using MyFinances.Entities;
 namespace MyFinances.Data
 {
     public class ApplicationDbContext
-        : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+        : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>,
+          IDataProtectionKeyContext
     {
         private readonly CurrentUser _currentUser;
 
@@ -38,6 +40,12 @@ namespace MyFinances.Data
         public DbSet<BillPayment> BillPayments => Set<BillPayment>();
         public DbSet<Holding> Holdings => Set<Holding>();
         public DbSet<HoldingValuation> HoldingValuations => Set<HoldingValuation>();
+
+        /// <summary>
+        /// The keys that sign cookies and antiforgery tokens. Kept in the
+        /// database so a restart or redeploy does not sign everyone out.
+        /// </summary>
+        public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
         protected override void ConfigureConventions(
             ModelConfigurationBuilder configurationBuilder)

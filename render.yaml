@@ -3,15 +3,11 @@ services:
     name: myfinances
     runtime: docker
     region: frankfurt
-    plan: 0.5c-512mb
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeployTrigger: commit
     healthCheckPath: /Identity/Account/Login
-    disk:
-      name: app-data
-      mountPath: /app/App_Data
-      sizeGB: 5
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -23,7 +19,7 @@ services:
 databases:
   - name: myfinances-db
     region: frankfurt
-    plan: 0.1c-256mb
+    plan: free
     databaseName: myfinances
     user: myfinances
     postgresMajorVersion: "18"
