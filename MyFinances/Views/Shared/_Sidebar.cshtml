@@ -1,0 +1,34 @@
+@{
+    var current = ViewContext.RouteData.Values["controller"] as string;
+
+    string On(params string[] controllers) =>
+        controllers.Any(c => string.Equals(current, c, StringComparison.OrdinalIgnoreCase))
+            ? "active"
+            : "";
+
+    var sections = new (string Group, (string Controller, string Icon, string Text, string[] Also)[] Items)[]
+    {
+        ("Overview", new[]
+        {
+            ("Home", "speedometer2", "Dashboard", Array.Empty<string>())
+        })
+    };
+}
+
+<nav class="sidebar-nav" id="sidebarNav" aria-label="Main navigation">
+
+    @foreach (var group in sections)
+    {
+        <div class="nav-group">@group.Group</div>
+
+        foreach (var item in group.Items)
+        {
+            <a class="nav-item @On([item.Controller, .. item.Also])"
+               asp-controller="@item.Controller"
+               asp-action="Index">
+                <i class="bi bi-@item.Icon" aria-hidden="true"></i> @item.Text
+            </a>
+        }
+    }
+
+</nav>

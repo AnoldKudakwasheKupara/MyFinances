@@ -7,13 +7,13 @@
 
 <div class="auth-head">
     <h1>Welcome back</h1>
-    <p>Sign in with your work account to continue.</p>
+    <p>Sign in to see where your money stands.</p>
 </div>
 
 @if (Request.Query["timedOut"] == "1")
 {
     <div class="alert alert-info" role="status">
-        <i class="fas fa-hourglass-end" aria-hidden="true"></i>
+        <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
         You were signed out after @MyFinances.Services.SessionTimeout.Idle.TotalMinutes minutes without activity. Sign in
         again to carry on where you left off.
     </div>
@@ -42,13 +42,13 @@
 
         <span class="field-icon">
 
-            <i class="fas fa-envelope" aria-hidden="true"></i>
+            <i class="bi bi-envelope" aria-hidden="true"></i>
 
             <input asp-for="Input.Email"
                    class="form-control"
                    autocomplete="username"
                    aria-required="true"
-                   placeholder="name@company.com" />
+                   placeholder="you@example.com" />
 
         </span>
 
@@ -65,7 +65,7 @@
 
         <span class="field-icon has-toggle">
 
-            <i class="fas fa-lock" aria-hidden="true"></i>
+            <i class="bi bi-lock" aria-hidden="true"></i>
 
             <input asp-for="Input.Password"
                    class="form-control"
@@ -79,7 +79,7 @@
                     aria-controls="Input_Password"
                     aria-pressed="false"
                     aria-label="Show password">
-                <i class="fas fa-eye-slash" aria-hidden="true"></i>
+                <i class="bi bi-eye-slash" aria-hidden="true"></i>
             </button>
 
         </span>
@@ -113,17 +113,14 @@
             type="submit"
             class="btn btn-primary w-100 justify-content-center">
         Sign in securely
-        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        <i class="bi bi-arrow-right" aria-hidden="true"></i>
     </button>
 
 </form>
 
-<p class="auth-privacy">
-    <a asp-area=""
-       asp-controller="Home"
-       asp-action="Privacy">
-        How this portal uses your information
-    </a>
+<p class="auth-switch">
+    New to MyFinances?
+    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a>
 </p>
 
 @section Scripts {

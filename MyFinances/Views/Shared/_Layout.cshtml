@@ -1,0 +1,184 @@
+@using Microsoft.AspNetCore.Identity
+@using MyFinances.Data
+@inject SignInManager<ApplicationUser> SignInManager
+@inject MyFinances.Services.UserPreferences Preferences
+
+@{
+    var settings = await Preferences.GetAsync();
+
+    var theme = settings.Theme switch
+    {
+        ThemePreference.Dark => "dark",
+        ThemePreference.System => "system",
+        _ => "light"
+    };
+
+    var displayName =
+        User.FindFirst(ApplicationUserClaimsPrincipalFactory.FullNameClaim)?.Value
+        ?? User.Identity?.Name
+        ?? "You";
+
+    var crumbs = ViewData["Crumbs"] as IEnumerable<(string Text, string Url)>;
+}
+
+<!DOCTYPE html>
+<html lang="en" data-theme="@(theme == "system" ? "light" : theme)" data-theme-pref="@theme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>@ViewData["Title"] - MyFinances</title>
+
+    <link rel="icon" type="image/svg+xml" href="~/images/icon.svg" />
+
+    @if (theme == "system")
+    {
+        <script>
+            if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+        </script>
+    }
+
+    <link rel="stylesheet" href="~/fonts/montserrat/montserrat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body>
+
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="app-layout">
+
+        <aside class="sidebar" id="sidebar">
+
+            <a class="sidebar-header" asp-controller="Home" asp-action="Index">
+                <span class="brand-mark" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+                <span class="brand-text">
+                    <span class="brand-name">MyFinances</span>
+                    <span class="brand-sub">Personal finance</span>
+                </span>
+            </a>
+
+            <partial name="_Sidebar" />
+
+        </aside>
+
+        <div class="main-area">
+
+            <header class="topbar">
+
+                <div class="topbar-left">
+
+                    <button class="mobile-toggle" type="button" onclick="toggleSidebar()" aria-label="Open the menu">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <nav class="crumbs" aria-label="Breadcrumb">
+                        @if (crumbs != null && crumbs.Any())
+                        {
+                            <span class="crumb-trail">
+                                @foreach (var crumb in crumbs)
+                                {
+                                    <a href="@crumb.Url">@crumb.Text</a>
+                                    <span class="sep" aria-hidden="true">/</span>
+                                }
+                            </span>
+                        }
+                        <span class="crumb-here" aria-current="page">@ViewData["Title"]</span>
+                    </nav>
+
+                </div>
+
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <div class="topbar-right">
+
+                        @await RenderSectionAsync("TopbarTools", required: false)
+
+                        <partial name="_TopbarTools" />
+
+                        <div class="dropdown">
+
+                            <button class="user-chip" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="user-avatar" aria-hidden="true">@displayName.Trim()[0].ToString().ToUpper()</span>
+                                <span class="user-name">@displayName</span>
+                                <i class="bi bi-chevron-down small text-muted" aria-hidden="true"></i>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index">
+                                        <i class="bi bi-person"></i> My profile
+                                    </a>
+                                </li>
+                                <partial name="_UserMenuExtra" />
+                                <li><hr class="dropdown-divider" /></li>
+                                <li>
+                                    <form asp-area="Identity" asp-page="/Account/Logout"
+                                          asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })"
+                                          method="post">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right"></i> Sign out
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <dialog id="idle-warning"
+                                class="idle-dialog"
+                                aria-labelledby="idle-warning-title"
+                                data-idle-seconds="@((int)MyFinances.Services.SessionTimeout.Idle.TotalSeconds)"
+                                data-warning-seconds="@((int)MyFinances.Services.SessionTimeout.Warning.TotalSeconds)"
+                                data-keepalive-seconds="@((int)MyFinances.Services.SessionTimeout.KeepAliveEvery.TotalSeconds)"
+                                data-keepalive-url="@Url.Action("KeepAlive", "Session", new { area = "" })"
+                                data-login-url="@Url.Page("/Account/Login", new { area = "Identity" })">
+
+                            <div class="idle-dialog-icon" aria-hidden="true">
+                                <i class="bi bi-hourglass-split"></i>
+                            </div>
+
+                            <h2 id="idle-warning-title">Are you still there?</h2>
+
+                            <p>
+                                To keep your finances private, you will be signed out in
+                                <strong><span data-idle-countdown>60</span> seconds</strong>.
+                            </p>
+
+                            <div class="idle-dialog-actions">
+                                <button type="button" class="btn btn-light" data-idle-signout>Sign out now</button>
+                                <button type="button" class="btn btn-primary" data-idle-stay>Stay signed in</button>
+                            </div>
+
+                        </dialog>
+
+                    </div>
+                }
+
+            </header>
+
+            <main id="main-content" class="content" tabindex="-1">
+                <div class="content-inner">
+                    <partial name="_Flash" />
+                    @RenderBody()
+                </div>
+            </main>
+
+        </div>
+
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/ux.js" asp-append-version="true"></script>
+    <script src="~/js/idle.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

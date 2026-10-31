@@ -1,0 +1,22 @@
+@{
+    var success = TempData["Flash"] as string;
+    var error = TempData["FlashError"] as string;
+}
+
+@if (!string.IsNullOrEmpty(success))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="status">
+        <i class="bi bi-check-circle" aria-hidden="true"></i>
+        <span>@success</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+        <span>@error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}

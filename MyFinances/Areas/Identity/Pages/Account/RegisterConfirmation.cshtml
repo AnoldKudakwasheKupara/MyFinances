@@ -1,2 +1,21 @@
 @page
 @model RegisterConfirmationModel
+
+@{
+    ViewData["Title"] = "Check your email";
+}
+
+<div class="auth-head">
+    <h1>Check your email</h1>
+    <p>
+        We sent a link to <strong>@(Model.Email ?? "your address")</strong>.
+        Open it to confirm your account, then sign in.
+    </p>
+</div>
+
+<a asp-page="./Login" class="btn btn-primary w-100">Go to sign in</a>
+
+<p class="auth-switch">
+    Nothing arrived?
+    <a asp-page="./ResendEmailConfirmation">Send the link again</a>
+</p>

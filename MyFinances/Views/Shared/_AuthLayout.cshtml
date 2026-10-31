@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MyFinances</title>
+    <link rel="icon" type="image/svg+xml" href="~/images/icon.svg" />
+
+    <link rel="stylesheet" href="~/fonts/montserrat/montserrat.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true" />
+</head>
+<body class="auth-body">
+
+    <div class="auth-split">
+
+        <aside class="auth-feature">
+
+            <svg class="auth-feature-art" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+                <rect class="art-bar" x="60" y="620" width="46" height="280" rx="8" />
+                <rect class="art-bar" x="130" y="560" width="46" height="340" rx="8" />
+                <rect class="art-bar" x="200" y="600" width="46" height="300" rx="8" />
+                <rect class="art-bar" x="270" y="500" width="46" height="400" rx="8" />
+                <rect class="art-bar" x="340" y="450" width="46" height="450" rx="8" />
+                <rect class="art-bar" x="410" y="380" width="46" height="520" rx="8" />
+                <rect class="art-bar" x="480" y="330" width="46" height="570" rx="8" />
+                <path class="art-fill" d="M0 700 C 120 640, 200 690, 300 560 S 470 420, 600 300 L 600 900 L 0 900 Z" />
+                <path class="art-line" d="M0 700 C 120 640, 200 690, 300 560 S 470 420, 600 300" />
+            </svg>
+
+            <div class="auth-feature-inner">
+
+                <div class="auth-feature-brand">
+                    <span class="brand-mark" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+                    <span class="brand-text">
+                        <span class="brand-name">MyFinances</span>
+                        <span class="brand-sub">Personal finance</span>
+                    </span>
+                </div>
+
+                <h1 class="auth-feature-title">
+                    All your money,
+                    <span>in one clear view.</span>
+                </h1>
+
+                <p class="auth-feature-lede">
+                    Bank, mobile money and cash in every currency you use,
+                    with budgets, goals and bills kept in step.
+                </p>
+
+                <ul class="auth-points">
+                    <li>
+                        <span class="auth-point-icon"><i class="bi bi-bank" aria-hidden="true"></i></span>
+                        <span class="auth-point-text">
+                            <strong>Every account, every currency</strong>
+                            USD, ZWG, ZAR, GBP and EUR, converted only at rates you record.
+                        </span>
+                    </li>
+                    <li>
+                        <span class="auth-point-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></span>
+                        <span class="auth-point-text">
+                            <strong>Know where it goes</strong>
+                            Spending by category, budgets that warn you early, and clear reports.
+                        </span>
+                    </li>
+                    <li>
+                        <span class="auth-point-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+                        <span class="auth-point-text">
+                            <strong>Private by design</strong>
+                            Your records are yours alone, behind a secure sign-in.
+                        </span>
+                    </li>
+                </ul>
+
+            </div>
+
+        </aside>
+
+        <main class="auth-panel">
+
+            <div class="auth-card">
+
+                <div class="auth-brand">
+                    <span class="brand-mark" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+                    MyFinances
+                </div>
+
+                @RenderBody()
+
+            </div>
+
+            <p class="auth-foot">&copy; @DateTime.Today.Year MyFinances</p>
+
+        </main>
+
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/ux.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

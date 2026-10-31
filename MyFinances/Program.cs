@@ -144,6 +144,7 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<UserSetupService>();
+builder.Services.AddScoped<UserPreferences>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<EmailService>();

@@ -2,4 +2,15 @@
     ViewData["Title"] = "Something went wrong";
 }
 
-<h1>Something went wrong</h1>
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon tone-rose"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i></div>
+        <div class="empty-title">Something went wrong</div>
+        <p class="empty-text">
+            MyFinances could not finish what you asked for. Nothing was
+            half-saved: changes to your money are made all at once or not at all.
+            Try again, and if it keeps happening, go back to the dashboard.
+        </p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Back to the dashboard</a>
+    </div>
+</div>
