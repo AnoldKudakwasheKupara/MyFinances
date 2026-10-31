@@ -163,6 +163,8 @@ builder.Services.AddScoped<DebtService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<NetWorthService>();
 builder.Services.AddScoped<ReminderService>();
+builder.Services.AddScoped<MyFinances.Services.Reporting.Analytics>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddHostedService<ReminderEmailWorker>();
 
 builder.Services.AddHttpClient();

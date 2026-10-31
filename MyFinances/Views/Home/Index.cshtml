@@ -1,5 +1,370 @@
+@model DashboardViewModel
+@using System.Text.Json
+@using MyFinances.Services
+@using MyFinances.Services.Reporting
+@inject UserPreferences Preferences
 @{
     ViewData["Title"] = "Dashboard";
+    await Preferences.GetAsync();
+
+    var c = Model.Currency;
+    var name = (User.FindFirst(MyFinances.Data.ApplicationUserClaimsPrincipalFactory.FullNameClaim)?.Value ?? "").Split(' ')[0];
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+    // A rise is good for money you have and money coming in; for spending it is not.
+    string ChangeBadge(decimal now, decimal? before, bool higherIsGood)
+    {
+        var change = DashboardViewModel.Change(now, before);
+        if (change == null)
+        {
+            return "";
+        }
+
+        var good = change == 0 ? "flat" : (change > 0) == higherIsGood ? "good" : "bad";
+        var arrow = change > 0 ? "bi-arrow-up-short" : change < 0 ? "bi-arrow-down-short" : "bi-dash";
+        return $"<span class=\"change {good}\"><i class=\"bi {arrow}\" aria-hidden=\"true\"></i>{Math.Abs(change.Value):0.#}%</span> <span>vs previous period</span>";
+    }
+
+    var shareTop = Model.Spending.Take(7).ToList();
+    var shareRest = Model.Spending.Skip(7).Sum(s => s.Amount);
+    var shareLabels = shareTop.Select(s => s.Name).ToList();
+    var shareValues = shareTop.Select(s => s.Amount).ToList();
+    if (shareRest > 0)
+    {
+        shareLabels.Add("Other");
+        shareValues.Add(shareRest);
+    }
+    var shareTotal = shareValues.Sum();
+
+    var flowsJson = JsonSerializer.Serialize(new
+    {
+        labels = Model.Series.Select(p => p.Label),
+        income = Model.Series.Select(p => p.Income),
+        expenses = Model.Series.Select(p => p.Expenses),
+        currency = c.ToString()
+    });
+
+    var shareJson = JsonSerializer.Serialize(new { labels = shareLabels, values = shareValues, currency = c.ToString() });
+
+    var quick = new[]
+    {
+        ("Transactions", "Create", (object)new { type = "Income" }, "arrow-down-left", "tone-green", "Add income"),
+        ("Transactions", "Create", new { type = "Expense" }, "arrow-up-right", "tone-rose", "Record expense"),
+        ("Transactions", "Create", new { type = "Transfer" }, "arrow-left-right", "tone-blue", "Transfer money"),
+        ("Budgets", "Create", new { }, "pie-chart", "tone-teal", "Create budget"),
+        ("Goals", "Create", new { }, "piggy-bank", "tone-amber", "Add savings goal")
+    };
 }
 
-<h1>MyFinances</h1>
+<div class="dash-head">
+    <div>
+        <div class="eyebrow">@DateTime.Today.ToString("dddd, d MMMM yyyy")</div>
+        <h1 class="dash-greeting">@greeting@(string.IsNullOrEmpty(name) ? "" : ", " + name)</h1>
+    </div>
+    @if (Model.HasAccounts)
+    {
+        <form method="get" class="period-picker" aria-label="Reporting period">
+            <label for="period" class="visually-hidden">Period</label>
+            <select id="period" name="period" class="form-select form-select-sm" onchange="this.form.submit()">
+                @foreach (var p in Enum.GetValues<DashboardPeriod>())
+                {
+                    <option value="@p" selected="@(p == Model.Period)">@p.Text()</option>
+                }
+            </select>
+            <input type="hidden" name="view" value="@Model.Grain" />
+            <noscript><button class="btn btn-sm btn-light" type="submit">Show</button></noscript>
+            <span class="text-muted small text-nowrap">@Preferences.Date(Model.Range.Start) – @Preferences.Date(Model.Range.End)</span>
+        </form>
+    }
+</div>
+
+@if (!Model.HasAccounts || !Model.HasTransactions)
+{
+    <div class="card mb-4">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-rocket-takeoff" aria-hidden="true"></i></div>
+            <div class="empty-title">Let's get your finances in one place</div>
+            <p class="empty-text">
+                Two steps and your dashboard comes alive: add the accounts you keep money in,
+                with what they hold today, then record what comes in and goes out.
+            </p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                @if (!Model.HasAccounts)
+                {
+                    <a class="btn btn-primary" asp-controller="Accounts" asp-action="Create"><i class="bi bi-1-circle" aria-hidden="true"></i> Add your first account</a>
+                }
+                else
+                {
+                    <a class="btn btn-light" asp-controller="Accounts" asp-action="Index"><i class="bi bi-check2-circle" aria-hidden="true"></i> Accounts added</a>
+                    <a class="btn btn-primary" asp-controller="Transactions" asp-action="Create"><i class="bi bi-2-circle" aria-hidden="true"></i> Record a transaction</a>
+                }
+            </div>
+        </div>
+    </div>
+
+    if (!Model.HasAccounts)
+    {
+        return;
+    }
+}
+
+<nav class="quick-actions" aria-label="Quick actions">
+    @foreach (var (ctrl, act, route, icon, tone, text) in quick)
+    {
+        <a class="quick-action" asp-controller="@ctrl" asp-action="@act" asp-all-route-data="@(route.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(route)?.ToString() ?? ""))">
+            <span class="cat-icon @tone"><i class="bi bi-@icon" aria-hidden="true"></i></span>@text
+        </a>
+    }
+</nav>
+
+<div class="stat-grid">
+    <div class="stat-card is-hero">
+        <div class="stat-top"><span class="stat-label">Total available balance</span><span class="stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(Model.Available.Amount, c)</div>
+        <div class="stat-note">
+            @if (!Model.Available.IsComplete)
+            {
+                <span>Leaves out @string.Join(", ", Model.Available.Unconverted.Select(u => Money.Format(u.Value, u.Key))) — no rate</span>
+            }
+            else
+            {
+                @Html.Raw(ChangeBadge(Model.Available.Amount, Model.AvailableBefore, true))
+            }
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Income</span><span class="stat-icon tone-green"><i class="bi bi-arrow-down-left" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(Model.Flows.Income, c)</div>
+        <div class="stat-note">@Html.Raw(ChangeBadge(Model.Flows.Income, Model.FlowsBefore?.Income, true))</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Expenses</span><span class="stat-icon tone-rose"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(Model.Flows.Expenses, c)</div>
+        <div class="stat-note">@Html.Raw(ChangeBadge(Model.Flows.Expenses, Model.FlowsBefore?.Expenses, false))</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Net worth</span><span class="stat-icon tone-teal"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(Model.NetWorth.NetWorth, c)</div>
+        <div class="stat-note">@Html.Raw(ChangeBadge(Model.NetWorth.NetWorth, Model.NetWorthBefore, true))</div>
+    </div>
+</div>
+
+@if (Model.Flows.Unconverted > 0)
+{
+    <div class="alert alert-warning" role="status">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>@Model.Flows.Unconverted transaction(s) this period have no exchange rate to @c and are left out of these figures. <a asp-controller="ExchangeRates" asp-action="Index">Record a rate</a>.</span>
+    </div>
+}
+
+<div class="dash-grid">
+
+    <section class="panel span-8" aria-labelledby="flows-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="flows-title">Income vs expenses</h2>
+            <div class="segmented" role="group" aria-label="Chart view">
+                @foreach (var g in Enum.GetValues<SeriesGrain>())
+                {
+                    <a class="@(g == Model.Grain ? "active" : "")" asp-route-period="@Model.Period" asp-route-view="@g" aria-current="@(g == Model.Grain ? "true" : null)">@g</a>
+                }
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="chart-box">
+                <canvas id="flows-chart" data-chart="flows" data-values="@flowsJson" role="img"
+                        aria-label="Income and expenses by @Model.Grain.ToString().ToLower() period"></canvas>
+            </div>
+            <details class="mt-2 small">
+                <summary class="text-muted">Show as a table</summary>
+                <table class="table table-sm mt-2">
+                    <thead><tr><th>Period</th><th class="text-end">Income</th><th class="text-end">Expenses</th><th class="text-end">Net</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in Model.Series)
+                        {
+                            <tr><td>@p.Label</td><td class="text-end num">@Money.Format(p.Income, c)</td><td class="text-end num">@Money.Format(p.Expenses, c)</td><td class="text-end num">@Money.Signed(p.Net, c)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </details>
+        </div>
+    </section>
+
+    <section class="panel span-4" aria-labelledby="share-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="share-title">Spending breakdown</h2>
+        </div>
+        <div class="panel-body">
+            @if (shareTotal == 0)
+            {
+                <div class="empty-state is-compact"><div class="empty-icon"><i class="bi bi-pie-chart" aria-hidden="true"></i></div><div class="empty-title">No spending this period</div></div>
+            }
+            else
+            {
+                <div class="chart-box is-small">
+                    <canvas id="share-chart" data-chart="share" data-values="@shareJson" role="img" aria-label="Spending by category"></canvas>
+                </div>
+                <ul class="legend-list" data-legend-for="share-chart">
+                    @for (var i = 0; i < shareLabels.Count; i++)
+                    {
+                        <li>
+                            <span class="legend-swatch" data-swatch="@i"></span>
+                            <span class="legend-name">@shareLabels[i]</span>
+                            <span class="num">@Money.Format(shareValues[i], c)</span>
+                            <span class="legend-share num">@((shareValues[i] / shareTotal * 100).ToString("0.0"))%</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </section>
+
+    <section class="panel span-7" aria-labelledby="recent-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="recent-title">Recent transactions</h2>
+            <a class="panel-link" asp-controller="Transactions" asp-action="Index">View all</a>
+        </div>
+        @if (!Model.Recent.Any())
+        {
+            <div class="empty-state is-compact"><div class="empty-title">Nothing recorded yet</div></div>
+        }
+        else
+        {
+            <partial name="_TransactionTable" model="Model.Recent" />
+        }
+    </section>
+
+    <section class="panel span-5" aria-labelledby="accounts-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="accounts-title">Account balances</h2>
+            <a class="panel-link" asp-controller="Accounts" asp-action="Index">Accounts</a>
+        </div>
+        <ul class="list-rows">
+            @foreach (var a in Model.Accounts)
+            {
+                <li class="list-row">
+                    <span class="cat-icon @Display.AccountTone(a.Account.Type)"><i class="bi bi-@Display.AccountIcon(a.Account.Type)" aria-hidden="true"></i></span>
+                    <div class="list-row-main">
+                        <a class="list-row-title" asp-controller="Accounts" asp-action="Details" asp-route-id="@a.Account.Id">@a.Account.Name</a>
+                        <span class="list-row-sub">@a.Account.Type.Text()</span>
+                    </div>
+                    <div class="list-row-end">
+                        <div class="num fw-semibold @(a.Balance < 0 ? "text-danger" : "")">@Money.Format(a.Balance, a.Currency)</div>
+                        <span class="currency-tag">@a.Currency</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="panel span-4" aria-labelledby="budgets-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="budgets-title">Budgets this month</h2>
+            <a class="panel-link" asp-controller="Budgets" asp-action="Index">All budgets</a>
+        </div>
+        <div class="panel-body">
+            @if (!Model.Budgets.Any())
+            {
+                <div class="empty-state is-compact p-0">
+                    <p class="empty-text mb-2">No budgets running.</p>
+                    <a class="btn btn-sm btn-light" asp-controller="Budgets" asp-action="Create">Create a budget</a>
+                </div>
+            }
+            @foreach (var b in Model.Budgets.OrderByDescending(b => b.Percent).Take(5))
+            {
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <a class="text-reset text-decoration-none" asp-controller="Budgets" asp-action="Details" asp-route-id="@b.Budget.Id">@b.Budget.Name</a>
+                        <span class="num">@b.Percent.ToString("0")%
+                            @if (b.State == BudgetState.Over)
+                            {
+                                <i class="bi bi-exclamation-octagon-fill text-danger" title="Over budget" aria-label="Over budget"></i>
+                            }
+                            else if (b.State == BudgetState.Warning)
+                            {
+                                <i class="bi bi-exclamation-triangle-fill" style="color:var(--warning)" title="Near the limit" aria-label="Near the limit"></i>
+                            }
+                        </span>
+                    </div>
+                    <partial name="_BudgetMeter" model="b" />
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="panel span-4" aria-labelledby="goals-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="goals-title">Savings goals</h2>
+            <a class="panel-link" asp-controller="Goals" asp-action="Index">All goals</a>
+        </div>
+        <div class="panel-body">
+            @if (!Model.Goals.Any())
+            {
+                <div class="empty-state is-compact p-0">
+                    <p class="empty-text mb-2">No active goals.</p>
+                    <a class="btn btn-sm btn-light" asp-controller="Goals" asp-action="Create">Add a goal</a>
+                </div>
+            }
+            @foreach (var g in Model.Goals)
+            {
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <a class="text-reset text-decoration-none" asp-controller="Goals" asp-action="Details" asp-route-id="@g.Goal.Id"><i class="bi bi-@g.Goal.Icon me-1" aria-hidden="true"></i>@g.Goal.Name</a>
+                        <span class="num">@g.Percent.ToString("0")%</span>
+                    </div>
+                    <div class="meter"><span style="width:@(Math.Min(100, g.Percent).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+                    <div class="meter-row"><span class="num">@Money.Format(g.Saved, g.Goal.Currency)</span><span class="num">of @Money.Format(g.Goal.TargetAmount, g.Goal.Currency)</span></div>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="panel span-4" aria-labelledby="bills-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="bills-title">Upcoming bills</h2>
+            <a class="panel-link" asp-controller="Bills" asp-action="Index">All bills</a>
+        </div>
+        @if (!Model.Bills.Any())
+        {
+            <div class="empty-state is-compact"><p class="empty-text mb-0">Nothing due in the next 30 days.</p></div>
+        }
+        <ul class="list-rows">
+            @foreach (var b in Model.Bills)
+            {
+                <li class="list-row">
+                    <div class="list-row-main">
+                        <a class="list-row-title" asp-controller="Bills" asp-action="Details" asp-route-id="@b.Bill.Id">@b.Bill.Name</a>
+                        <span class="list-row-sub">@Preferences.Date(b.Bill.NextDueDate)</span>
+                    </div>
+                    <div class="list-row-end">
+                        <div class="num fw-semibold">@Money.Format(b.Bill.Amount, b.Bill.Currency)</div>
+                        <partial name="_BillState" model="b" />
+                    </div>
+                </li>
+            }
+        </ul>
+    </section>
+
+    <section class="panel span-12 overflow-hidden" aria-labelledby="summary-title">
+        <div class="panel-header">
+            <h2 class="panel-title" id="summary-title">Financial summary</h2>
+            <span class="panel-note">@Model.Period.Text() · in @c</span>
+        </div>
+        <div class="summary-grid">
+            <div class="summary-item"><div class="summary-label">Total income</div><div class="summary-value num">@Money.Format(Model.Flows.Income, c)</div></div>
+            <div class="summary-item"><div class="summary-label">Total expenses</div><div class="summary-value num">@Money.Format(Model.Flows.Expenses, c)</div></div>
+            <div class="summary-item"><div class="summary-label">Net cash flow</div><div class="summary-value num @(Model.Flows.Net < 0 ? "text-danger" : "")">@Money.Signed(Model.Flows.Net, c)</div></div>
+            <div class="summary-item"><div class="summary-label">Savings rate</div><div class="summary-value num">@(Model.SavingsRate == null ? "—" : Model.SavingsRate.Value.ToString("0.#") + "%")</div></div>
+            <div class="summary-item"><div class="summary-label">Average daily spending</div><div class="summary-value num">@Money.Format(Model.DailySpending, c)</div></div>
+            <div class="summary-item"><div class="summary-label">Largest expense</div><div class="summary-value num">@(Model.LargestExpense == null ? "—" : Money.Format(Model.LargestExpense.Amount, c))</div>@if (Model.LargestExpense != null) {<div class="small text-muted text-truncate">@Model.LargestExpense.Description</div>}</div>
+            <div class="summary-item"><div class="summary-label">Debt principal in / out</div><div class="summary-value num">@Money.Format(Model.Flows.DebtIn, c) / @Money.Format(Model.Flows.DebtOut, c)</div></div>
+            <div class="summary-item"><div class="summary-label">Transactions</div><div class="summary-value num">@Model.TransactionCount</div></div>
+        </div>
+    </section>
+
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script src="~/js/charts.js" asp-append-version="true"></script>
+}
