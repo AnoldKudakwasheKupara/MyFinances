@@ -1,0 +1,88 @@
+@model List<MyFinances.Services.BillStatus>
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    ViewData["Title"] = "Bills & recurring payments";
+    await Preferences.GetAsync();
+    var overdue = Model.Count(b => b.State == BillState.Overdue);
+    var soon = Model.Count(b => b.State == BillState.DueSoon);
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Bills &amp; recurring payments</h1>
+        <p class="page-lede">Rent, utilities, subscriptions and anything else that comes round again. Each due date can be paid once.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add bill</a>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></div>
+            <div class="empty-title">No bills yet</div>
+            <p class="empty-text">Add the bills you pay regularly and MyFinances will remind you before each one is due.</p>
+            <a class="btn btn-primary" asp-action="Create">Add bill</a>
+        </div>
+    </div>
+    return;
+}
+
+@if (overdue > 0 || soon > 0)
+{
+    <div class="alert @(overdue > 0 ? "alert-danger" : "alert-warning")" role="status">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span>
+            @if (overdue > 0)
+            {
+                <strong>@overdue overdue.</strong>
+            }
+            @if (soon > 0)
+            {
+                <span>@soon due soon.</span>
+            }
+        </span>
+    </div>
+}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover table-stack">
+            <thead>
+                <tr>
+                    <th>Bill</th>
+                    <th>Next due</th>
+                    <th>Status</th>
+                    <th>Repeats</th>
+                    <th>Paid from</th>
+                    <th class="text-end">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    var b = s.Bill;
+                    <tr class="@(b.IsActive ? "" : "opacity-75")">
+                        <td data-label="Bill">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="cat-icon tone-teal"><i class="bi bi-@(b.Category?.Icon ?? "receipt")" aria-hidden="true"></i></span>
+                                <div>
+                                    <a class="row-title" asp-action="Details" asp-route-id="@b.Id">@b.Name</a>
+                                    <span class="row-sub">@b.Type.Text()</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Next due" class="text-nowrap">@Preferences.Date(b.NextDueDate)</td>
+                        <td data-label="Status"><partial name="_BillState" model="s" /></td>
+                        <td data-label="Repeats">@b.Frequency</td>
+                        <td data-label="Paid from">@(b.Account?.Name ?? "—")</td>
+                        <td data-label="Amount" class="text-end amount num">@Money.Format(b.Amount, b.Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

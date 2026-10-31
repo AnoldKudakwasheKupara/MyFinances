@@ -1,0 +1,141 @@
+@model BillDetailsViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    var s = Model.Status;
+    var b = s.Bill;
+    ViewData["Title"] = b.Name;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Bills", Url.Action("Index")!) };
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@b.Name</h1>
+        <p class="page-lede mt-1">
+            @Money.Format(b.Amount, b.Currency) · @b.Frequency.ToString().ToLower() · @b.Category?.Name
+            <span class="ms-1"><partial name="_BillState" model="s" /></span>
+        </p>
+    </div>
+    <div class="page-actions">
+        @if (b.IsActive)
+        {
+            <form asp-action="Skip" asp-route-id="@b.Id" method="post" class="d-inline" data-confirm="Skip the @Preferences.Date(b.NextDueDate) occurrence without paying it?">
+                <button type="submit" class="btn btn-light"><i class="bi bi-skip-forward" aria-hidden="true"></i> Skip this one</button>
+            </form>
+        }
+        <a class="btn btn-light" asp-action="Edit" asp-route-id="@b.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <form asp-action="Delete" asp-route-id="@b.Id" method="post" class="d-inline" data-confirm="Delete the @b.Name bill?">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-5 order-xl-2">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Pay the @Preferences.Date(b.NextDueDate) bill</span></div>
+            <div class="card-body">
+                @if (!b.IsActive)
+                {
+                    <p class="text-muted small mb-0">This bill is paused. Edit it and turn it on to record payments.</p>
+                }
+                else
+                {
+                    <form asp-action="Pay" asp-route-id="@b.Id" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label asp-for="Form.Amount" class="form-label">Amount (@b.Currency)</label>
+                                <input asp-for="Form.Amount" class="form-control num" type="number" step="0.01" min="0.01" />
+                                <span asp-validation-for="Form.Amount" class="text-danger"></span>
+                            </div>
+                            <div class="col-6">
+                                <label asp-for="Form.PaidDate" class="form-label">Paid on</label>
+                                <input asp-for="Form.PaidDate" class="form-control" type="date" />
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input asp-for="Form.RecordExpense" class="form-check-input" role="switch" />
+                            <label asp-for="Form.RecordExpense" class="form-check-label">Record the expense in my transactions</label>
+                            <div class="form-text">Turn off if you have already recorded this payment, so it is not counted twice.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Form.AccountId" class="form-label">Paid from</label>
+                            <select asp-for="Form.AccountId" class="form-select">
+                                <option value="">Choose an account</option>
+                                @foreach (var a in Model.Accounts)
+                                {
+                                    <option value="@a.Id" selected="@(a.Id == Model.Form.AccountId)">@a.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Form.Notes" class="form-label">Notes</label>
+                            <input asp-for="Form.Notes" class="form-control" placeholder="Reference, token number…" />
+                        </div>
+
+                        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Mark as paid</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7 order-xl-1">
+        <div class="card">
+            <div class="card-header">
+                <span class="panel-title">Payment history</span>
+                @if (Model.Payments.Any())
+                {
+                    <form asp-action="Undo" asp-route-id="@b.Id" method="post" data-confirm="Undo the latest payment? Its expense is removed and the bill becomes due again.">
+                        <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Undo latest</button>
+                    </form>
+                }
+            </div>
+            @if (!Model.Payments.Any())
+            {
+                <div class="empty-state is-compact"><div class="empty-title">No payments yet</div></div>
+            }
+            else
+            {
+                <ul class="list-rows">
+                    @foreach (var p in Model.Payments)
+                    {
+                        var t = p.Transactions.FirstOrDefault();
+                        <li class="list-row">
+                            <span class="cat-icon tone-green"><i class="bi bi-check2" aria-hidden="true"></i></span>
+                            <div class="list-row-main">
+                                <span class="list-row-title">Due @Preferences.Date(p.DueDate)</span>
+                                <span class="list-row-sub">
+                                    Paid @Preferences.Date(p.PaidDate)
+                                    @(p.PaidDate > p.DueDate ? $" · {p.PaidDate.DayNumber - p.DueDate.DayNumber} day(s) late" : "")
+                                    · @(t == null ? "not in the ledger" : "expense from " + t.Account?.Name)
+                                    @(p.Notes != null ? " · " + p.Notes : "")
+                                </span>
+                            </div>
+                            <div class="list-row-end">
+                                @if (t != null)
+                                {
+                                    <a class="amount num out" asp-controller="Transactions" asp-action="Details" asp-route-id="@t.Id">@Money.Format(p.Amount, b.Currency)</a>
+                                }
+                                else
+                                {
+                                    <span class="amount num">@Money.Format(p.Amount, b.Currency)</span>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(b.Notes))
+        {
+            <p class="text-muted mt-3">@b.Notes</p>
+        }
+    </div>
+</div>

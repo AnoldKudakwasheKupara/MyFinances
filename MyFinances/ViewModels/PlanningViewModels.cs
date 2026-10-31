@@ -236,3 +236,79 @@ namespace MyFinances.ViewModels
         public List<Account> Accounts { get; init; } = new();
     }
 }
+
+namespace MyFinances.ViewModels
+{
+    public class BillFormViewModel
+    {
+        public int? Id { get; set; }
+
+        [Required]
+        [StringLength(80)]
+        [Display(Name = "Bill")]
+        public string Name { get; set; } = string.Empty;
+
+        [Display(Name = "Kind of bill")]
+        public BillType Type { get; set; } = BillType.Utilities;
+
+        [Range(0.01, 9_999_999_999_999, ErrorMessage = "Enter an amount above zero.")]
+        public decimal Amount { get; set; }
+
+        public Currency Currency { get; set; }
+
+        [Display(Name = "Category")]
+        public int CategoryId { get; set; }
+
+        [Display(Name = "Usually paid from")]
+        public int? AccountId { get; set; }
+
+        [Display(Name = "Repeats")]
+        public Frequency Frequency { get; set; } = Frequency.Monthly;
+
+        [Display(Name = "Next due")]
+        public DateOnly NextDueDate { get; set; } = UserPreferences.Today;
+
+        [Range(0, 60)]
+        [Display(Name = "Remind me (days before)")]
+        public int ReminderDays { get; set; } = 3;
+
+        [Display(Name = "Active")]
+        public bool IsActive { get; set; } = true;
+
+        [StringLength(500)]
+        public string? Notes { get; set; }
+
+        public List<Category> Categories { get; set; } = new();
+
+        public List<Account> Accounts { get; set; } = new();
+    }
+
+    public class BillPaymentFormViewModel
+    {
+        [Display(Name = "Paid on")]
+        public DateOnly PaidDate { get; set; } = UserPreferences.Today;
+
+        [Range(0.01, 9_999_999_999_999, ErrorMessage = "Enter the amount paid.")]
+        public decimal Amount { get; set; }
+
+        [Display(Name = "Paid from")]
+        public int? AccountId { get; set; }
+
+        [Display(Name = "Record the expense in my transactions")]
+        public bool RecordExpense { get; set; } = true;
+
+        [StringLength(500)]
+        public string? Notes { get; set; }
+    }
+
+    public class BillDetailsViewModel
+    {
+        public BillStatus Status { get; init; } = default!;
+
+        public List<BillPayment> Payments { get; init; } = new();
+
+        public BillPaymentFormViewModel Form { get; init; } = new();
+
+        public List<Account> Accounts { get; init; } = new();
+    }
+}

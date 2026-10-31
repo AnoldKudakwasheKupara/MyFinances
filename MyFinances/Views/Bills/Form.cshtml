@@ -1,0 +1,97 @@
+@model BillFormViewModel
+@using MyFinances.Services
+@{
+    var editing = Model.Id != null;
+    ViewData["Title"] = editing ? "Edit bill" : "Add bill";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Bills", Url.Action("Index")!) };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@ViewData["Title"]</h1>
+        <p class="page-lede">Set the next due date; after each payment the bill moves on by its repeat.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. ZESA prepaid, Netflix, Rent" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-5">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" class="form-select" asp-items="EnumText.Options<BillType>(Model.Type)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control num" type="number" step="0.01" min="0.01" value="@(Model.Amount == 0 ? "" : Model.Amount.ToString("0.00"))" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label"></label>
+                    <select asp-for="Currency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Currency)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" class="form-select" required>
+                        <option value="">Choose a category</option>
+                        @foreach (var c in Model.Categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == Model.CategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Frequency" class="form-label"></label>
+                    <select asp-for="Frequency" class="form-select" asp-items="EnumText.Options<Frequency>(Model.Frequency)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="NextDueDate" class="form-label"></label>
+                    <input asp-for="NextDueDate" class="form-control" type="date" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ReminderDays" class="form-label"></label>
+                    <input asp-for="ReminderDays" class="form-control" type="number" min="0" max="60" />
+                </div>
+                <div class="col-md-8">
+                    <label asp-for="AccountId" class="form-label"></label>
+                    <select asp-for="AccountId" class="form-select">
+                        <option value="">Not set</option>
+                        @foreach (var a in Model.Accounts)
+                        {
+                            <option value="@a.Id" selected="@(a.Id == Model.AccountId)">@a.Name (@a.Currency)</option>
+                        }
+                    </select>
+                </div>
+                @if (editing)
+                {
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check form-switch mb-2">
+                            <input asp-for="IsActive" class="form-check-input" role="switch" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                }
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Account number, meter number, how to pay"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a class="btn btn-light" href="@(editing ? Url.Action("Details", new { id = Model.Id }) : Url.Action("Index"))">Cancel</a>
+                <button class="btn btn-primary" type="submit">@(editing ? "Save changes" : "Add bill")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

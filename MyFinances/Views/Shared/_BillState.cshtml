@@ -1,0 +1,21 @@
+@model MyFinances.Services.BillStatus
+@using MyFinances.Services
+@{
+    var days = Model.DaysUntilDue;
+}
+
+@switch (Model.State)
+{
+    case BillState.Overdue:
+        <span class="status-pill tone-rose">Overdue @(-days) day@(days == -1 ? "" : "s")</span>
+        break;
+    case BillState.DueSoon:
+        <span class="status-pill tone-amber">@(days == 0 ? "Due today" : days == 1 ? "Due tomorrow" : $"Due in {days} days")</span>
+        break;
+    case BillState.Inactive:
+        <span class="status-pill tone-slate">Paused</span>
+        break;
+    default:
+        <span class="status-pill tone-teal">In @days days</span>
+        break;
+}
