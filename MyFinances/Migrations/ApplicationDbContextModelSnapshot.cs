@@ -1002,6 +1002,9 @@ namespace MyFinances.Migrations
                     b.Property<int>("FinancialYearStartMonth")
                         .HasColumnType("integer");
 
+                    b.Property<DateOnly?>("LastReminderEmailOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("ReportingCurrency")
                         .IsRequired()
                         .HasMaxLength(3)

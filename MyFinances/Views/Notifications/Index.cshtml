@@ -1,0 +1,51 @@
+@model List<MyFinances.Services.Reminder>
+@using MyFinances.Services
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Notifications</h1>
+        <p class="page-lede">What needs your attention, worked out from your records. Each one clears itself once it is dealt with.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-controller="Settings" asp-action="Index"><i class="bi bi-sliders" aria-hidden="true"></i> Reminder settings</a>
+    </div>
+</div>
+
+<div class="card">
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon tone-green"><i class="bi bi-check2-circle" aria-hidden="true"></i></div>
+            <div class="empty-title">All clear</div>
+            <p class="empty-text">No bills due, no budgets over and nothing overdue. Nice.</p>
+        </div>
+    }
+    else
+    {
+        <ul class="list-rows">
+            @foreach (var r in Model)
+            {
+                var tone = r.Level switch
+                {
+                    ReminderLevel.Urgent => "tone-rose",
+                    ReminderLevel.Warning => "tone-amber",
+                    _ => "tone-blue"
+                };
+
+                <li class="list-row">
+                    <span class="cat-icon @tone"><i class="bi bi-@r.Icon" aria-hidden="true"></i></span>
+                    <div class="list-row-main">
+                        <a class="list-row-title" href="@r.Url">@r.Title</a>
+                        <span class="list-row-sub">@r.Detail</span>
+                    </div>
+                    <div class="list-row-end">
+                        <a class="btn btn-sm btn-light" href="@r.Url">Open</a>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

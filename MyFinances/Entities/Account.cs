@@ -101,6 +101,9 @@ namespace MyFinances.Entities
 
         public bool EmailReminders { get; set; }
 
+        /// <summary>The day the last reminder digest went out, so it goes once a day.</summary>
+        public DateOnly? LastReminderEmailOn { get; set; }
+
         public bool ShowArchivedAccounts { get; set; }
 
         /// <summary>Picked first on a new transaction.</summary>
