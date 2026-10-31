@@ -1,0 +1,82 @@
+@page
+@model ShowRecoveryCodesModel
+@{
+    ViewData["Title"] = "Recovery codes";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+
+    var codes = Model.RecoveryCodes ?? Array.Empty<string>();
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Recovery codes</h2>
+
+        <p class="text-muted">
+            Each one signs you in once when you cannot reach your
+            authenticator app.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    <div class="row g-3">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header">
+                    Your @codes.Length code@(codes.Length == 1 ? "" : "s")
+                </div>
+
+                <div class="card-body">
+
+                    <div class="alert alert-warning">
+                        <strong>This is the only time they are shown.</strong>
+                        Copy them somewhere safe before you leave the
+                        page.
+                    </div>
+
+                    @if (codes.Length == 0)
+                    {
+                        <div class="field-value is-empty">
+                            No codes were generated.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row g-2">
+                            @foreach (var code in codes)
+                            {
+                                <div class="col-sm-6">
+                                    <code class="recovery-code user-select-all">
+                                        @code
+                                    </code>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <p class="text-muted small mt-3">
+                        Keep them away from the device that runs your
+                        authenticator app. Without either, you lose access
+                        to the account.
+                    </p>
+
+                    <a class="btn btn-primary mt-2"
+                       asp-page="./TwoFactorAuthentication">
+                        Done
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

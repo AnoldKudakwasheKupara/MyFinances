@@ -1,0 +1,268 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
+using MyFinances.Data;
+using MyFinances.Security;
+using MyFinances.Services;
+using Npgsql;
+using System.IO.Compression;
+
+var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? PostgresUrl.ToConnectionString(
+        builder.Configuration["DATABASE_URL"]);
+
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "No database was configured. Set a PostgreSQL connection " +
+        "string in user secrets (dotnet user-secrets set " +
+        "\"ConnectionStrings:DefaultConnection\" \"Host=...;" +
+        "Database=...;Username=...;Password=...\"), in the " +
+        "ConnectionStrings__DefaultConnection environment variable, " +
+        "or as a postgres:// address in DATABASE_URL.");
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(
+        connectionString,
+        npgsql => npgsql.EnableRetryOnFailure()
+    ));
+
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection(EmailOptions.Section));
+
+var emailEnabled = builder.Configuration.GetValue<bool>("Email:Enabled");
+
+builder.Services
+    .AddIdentity<ApplicationUser, IdentityRole<int>>(options =>
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 8;
+
+        options.User.RequireUniqueEmail = true;
+
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.AllowedForNewUsers = true;
+
+        // Confirming an address needs an email to reach it. Until mail
+        // is configured, new accounts can sign in straight away.
+        options.SignIn.RequireConfirmedAccount = emailEnabled;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultUI()
+    .AddDefaultTokenProviders()
+    .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
+
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromMinutes(5);
+});
+
+/// <summary>
+/// Cookies that carry a sign-in or a form token are only ever sent
+/// over HTTPS. Running locally under Development they follow the
+/// request, so the plain http profile still works.
+/// </summary>
+var cookieSecurity = builder.Environment.IsDevelopment()
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
+
+/// <summary>
+/// Render ends HTTPS at its own proxy and passes the request on over
+/// plain http, saying in X-Forwarded-Proto and X-Forwarded-For how it
+/// arrived and from where. Only the last hop is taken, which is the
+/// one Render adds, so a visitor cannot pass off an address of their
+/// own choosing.
+/// </summary>
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+builder.Services.AddAntiforgery(options =>
+    options.Cookie.SecurePolicy = cookieSecurity);
+
+builder.Services.Configure<CookieTempDataProviderOptions>(options =>
+    options.Cookie.SecurePolicy = cookieSecurity);
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Identity/Account/Login";
+    options.LogoutPath = "/Identity/Account/Logout";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+
+    options.Cookie.Name = "MyFinances.Auth";
+    options.Cookie.SecurePolicy = cookieSecurity;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+
+    options.ExpireTimeSpan = SessionTimeout.CookieLifetime;
+    options.SlidingExpiration = true;
+
+    var validate = options.Events.OnValidatePrincipal;
+
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        await validate(context);
+
+        if (context.Principal != null)
+            context.ShouldRenew = true;
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(
+        builder.Environment.ContentRootPath, "App_Data", "keys")))
+    .SetApplicationName("MyFinances");
+
+builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<UserSetupService>();
+
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<EmailService>();
+builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, IdentityEmailSender>();
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+
+    options.MimeTypes = new[]
+    {
+        "text/css",
+        "text/javascript",
+        "application/javascript",
+        "image/svg+xml",
+        "font/woff",
+        "font/woff2"
+    };
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.AddRateLimiter(SignInLimits.Configure);
+
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AllowAnonymousToAreaFolder(
+        "Identity",
+        "/Account");
+
+    options.Conventions.AllowAnonymousToAreaPage(
+        "Identity",
+        "/Error");
+
+    options.Conventions.AuthorizeAreaFolder(
+        "Identity",
+        "/Account/Manage");
+});
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    try
+    {
+        await db.Database.MigrateAsync();
+    }
+    catch (NpgsqlException ex)
+    {
+        var target = new NpgsqlConnectionStringBuilder(connectionString);
+
+        app.Logger.LogError(
+            ex,
+            "Could not prepare the database '{Database}' on '{Host}'. " +
+            "Check that PostgreSQL is running and that the login in the " +
+            "connection string can reach it and create databases. See " +
+            "README.md for first-run setup.",
+            target.Database,
+            target.Host);
+
+        throw;
+    }
+}
+
+app.UseForwardedHeaders();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseResponseCompression();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.GetTypedHeaders().CacheControl =
+            new CacheControlHeaderValue
+            {
+                Public = true,
+                MaxAge = TimeSpan.FromDays(7)
+            };
+    }
+});
+
+app.Use(SignInLimits.ReadEmailAsync);
+
+app.UseRateLimiter();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapRazorPages();
+
+app.Run();
+
+public partial class Program;

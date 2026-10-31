@@ -1,0 +1,19 @@
+@page
+@model LockoutModel
+
+@{
+    ViewData["Title"] = "Locked out";
+}
+
+<div class="auth-head">
+    <h1>Account locked</h1>
+    <p>
+        Too many failed sign-in attempts. Please try again in a few
+        minutes, or ask an administrator to reset your password.
+    </p>
+</div>
+
+<a asp-page="./Login"
+   class="btn btn-primary w-100 justify-content-center">
+    Back to sign in
+</a>

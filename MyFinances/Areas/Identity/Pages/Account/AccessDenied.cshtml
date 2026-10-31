@@ -1,0 +1,16 @@
+@page
+@model AccessDeniedModel
+
+@{
+    ViewData["Title"] = "Access denied";
+}
+
+<div class="auth-head">
+    <h1>Access denied</h1>
+    <p>You do not have permission to open that page.</p>
+</div>
+
+<a asp-page="./Login"
+   class="btn btn-primary w-100 justify-content-center">
+    Back to sign in
+</a>

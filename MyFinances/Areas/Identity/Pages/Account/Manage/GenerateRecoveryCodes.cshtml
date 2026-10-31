@@ -1,0 +1,76 @@
+@page
+@model GenerateRecoveryCodesModel
+@{
+    ViewData["Title"] = "Generate recovery codes";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Generate recovery codes</h2>
+
+        <p class="text-muted">
+            One-use codes that get you in when you cannot reach your
+            authenticator app.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    <div class="row g-3">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header">Confirm</div>
+
+                <div class="card-body">
+
+                    <div class="alert alert-warning">
+                        <strong>The codes you have now stop working.</strong>
+                        Generating a new set replaces the old one, so
+                        anything you wrote down before is spent.
+                    </div>
+
+                    <div class="field-value">
+                        You will see the new codes once. Keep them
+                        somewhere safe and away from the device that runs
+                        your authenticator app; without either you lose
+                        access to the account.
+                    </div>
+
+                    <p class="text-muted small">
+                        This does not change the key your authenticator
+                        app holds. To change that, reset the authenticator
+                        key instead.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+
+                        <form method="post">
+                            <button class="btn btn-danger" type="submit">
+                                <i class="fas fa-key"></i>
+                                Generate new codes
+                            </button>
+                        </form>
+
+                        <a class="btn btn-secondary"
+                           asp-page="./TwoFactorAuthentication">
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

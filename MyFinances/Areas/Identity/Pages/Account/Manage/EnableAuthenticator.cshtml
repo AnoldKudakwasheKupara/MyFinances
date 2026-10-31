@@ -1,0 +1,144 @@
+@page
+@model EnableAuthenticatorModel
+@{
+    ViewData["Title"] = "Set up authenticator app";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Set up authenticator app</h2>
+
+        <p class="text-muted">
+            Three steps: install an app, give it this account, then enter
+            the code it shows you.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    <div class="row g-3">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">1. Install an app</div>
+
+                <div class="card-body">
+
+                    <div class="field-value">
+                        Any authenticator app will do. Common ones are
+                        Microsoft Authenticator
+                        (<a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a>,
+                        <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a>)
+                        and Google Authenticator
+                        (<a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&amp;hl=en">Android</a>,
+                        <a href="https://itunes.apple.com/us/app/google-authenticator/id388497605?mt=8">iOS</a>).
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-lg-5">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">2. Add this account</div>
+
+                <div class="card-body">
+
+                    <div class="field-value">
+                        In the app, choose to add an account by entering a
+                        key, and type this one in. Spaces and capitals do
+                        not matter.
+                    </div>
+
+                    <span class="field-label">Setup key</span>
+
+                    <div class="field-value">
+                        <kbd class="user-select-all">@Model.SharedKey</kbd>
+                    </div>
+
+                    <div id="qrCode" class="my-3"></div>
+
+                    <div id="qrCodeData"
+                         data-url="@Model.AuthenticatorUri"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-3 mb-4">
+
+        <div class="card-header">3. Enter the code it shows</div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-lg-5">
+
+                    <form id="send-code" method="post">
+
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger mb-3"
+                             role="alert"></div>
+
+                        <div class="mb-3">
+
+                            <label asp-for="Input.Code"
+                                   class="form-label">
+                                Verification code
+                            </label>
+
+                            <input asp-for="Input.Code"
+                                   class="form-control"
+                                   autocomplete="off"
+                                   inputmode="numeric"
+                                   placeholder="123456" />
+
+                            <div class="form-text">
+                                The code changes every thirty seconds, so
+                                enter the one showing now.
+                            </div>
+
+                            <span asp-validation-for="Input.Code"
+                                  class="text-danger"></span>
+
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            Verify and switch on
+                        </button>
+
+                        <a class="btn btn-secondary"
+                           asp-page="./TwoFactorAuthentication">
+                            Cancel
+                        </a>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

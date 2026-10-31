@@ -1,0 +1,73 @@
+@page
+@model ResetAuthenticatorModel
+@{
+    ViewData["Title"] = "Reset authenticator key";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Reset authenticator key</h2>
+
+        <p class="text-muted">
+            Issues a new key, so the app you use now stops producing
+            codes that work.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    <div class="row g-3">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header">Confirm</div>
+
+                <div class="card-body">
+
+                    <div class="alert alert-warning">
+                        <strong>
+                            Your authenticator app will stop working until
+                            you set it up again.
+                        </strong>
+                        The second step is switched off in the meantime.
+                    </div>
+
+                    <div class="field-value">
+                        Have the app to hand before you start. If you do
+                        not finish setting it up again, you may lose the
+                        ability to sign in.
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+
+                        <form id="reset-authenticator-form" method="post">
+                            <button id="reset-authenticator-button"
+                                    class="btn btn-danger"
+                                    type="submit">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Reset the key
+                            </button>
+                        </form>
+
+                        <a class="btn btn-secondary"
+                           asp-page="./TwoFactorAuthentication">
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

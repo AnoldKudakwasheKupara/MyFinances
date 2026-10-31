@@ -1,0 +1,81 @@
+@page
+@model ErrorModel
+
+@{
+    ViewData["Title"] = "Error";
+}
+
+<div class="container">
+
+    <div class="page-head-simple">
+
+        <h2>Something went wrong</h2>
+
+        <p class="text-muted">
+            The portal could not finish what you asked for.
+        </p>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">What happened</div>
+
+        <div class="card-body">
+
+            <div class="detail-rows">
+
+                <div class="detail-row">
+
+                    <span class="detail-icon">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    </span>
+
+                    <div class="detail-text">
+                        <span class="field-label">The request did not complete</span>
+                        <div class="field-value">
+                            Nothing has been saved. Going back and trying
+                            again often works; if it keeps happening,
+                            pass the reference below to whoever looks
+                            after the portal.
+                        </div>
+                    </div>
+
+                </div>
+
+                @if (Model.ShowRequestId)
+                {
+                    <div class="detail-row">
+
+                        <span class="detail-icon">
+                            <i class="fas fa-hashtag" aria-hidden="true"></i>
+                        </span>
+
+                        <div class="detail-text">
+                            <span class="field-label">Reference</span>
+                            <div class="field-value">
+                                <code>@Model.RequestId</code>
+                            </div>
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+
+            <div class="mt-4">
+
+                <a class="btn btn-primary"
+                   asp-area=""
+                   asp-controller="Home"
+                   asp-action="Index">
+                    Back to the dashboard
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

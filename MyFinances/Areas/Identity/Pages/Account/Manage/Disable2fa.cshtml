@@ -1,0 +1,73 @@
+@page
+@model Disable2faModel
+@{
+    ViewData["Title"] = "Turn off two-factor authentication";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Turn off two-factor authentication</h2>
+
+        <p class="text-muted">
+            Signing in will go back to needing only your password.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    <div class="row g-3">
+
+        <div class="col-lg-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header">Confirm</div>
+
+                <div class="card-body">
+
+                    <div class="alert alert-warning">
+                        <strong>This only turns the second step off.</strong>
+                        It does not change the key your authenticator app
+                        holds. To change that, reset the authenticator key
+                        instead.
+                    </div>
+
+                    <div class="field-value">
+                        You can turn it on again afterwards, and your
+                        authenticator app will still work.
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+
+                        <form method="post">
+                            <button class="btn btn-danger" type="submit">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Turn off two-factor
+                            </button>
+                        </form>
+
+                        <a class="btn btn-outline-secondary"
+                           asp-page="./ResetAuthenticator">
+                            Reset the authenticator key instead
+                        </a>
+
+                        <a class="btn btn-secondary"
+                           asp-page="./TwoFactorAuthentication">
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

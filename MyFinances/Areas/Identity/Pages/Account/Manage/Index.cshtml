@@ -1,0 +1,128 @@
+@page
+@model IndexModel
+
+@{
+    ViewData["Title"] = "My profile";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+
+    var initial = string.IsNullOrWhiteSpace(Model.Input.FullName)
+        ? "?"
+        : Model.Input.FullName.Trim()[0].ToString().ToUpper();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">My profile</h1>
+        <p class="page-lede">Your name, contact details and how you sign in.</p>
+    </div>
+</div>
+
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="row g-3">
+
+    <div class="col-lg-5">
+
+        <div class="card h-100">
+
+            <div class="card-body">
+
+                <div class="account-identity">
+
+                    <div class="account-avatar">@initial</div>
+
+                    <div>
+                        <h2 class="h5 mb-1">@Model.Input.FullName</h2>
+                        <div class="text-muted">@Model.Email</div>
+                    </div>
+
+                </div>
+
+                <hr />
+
+                <dl class="detail-list">
+                    <dt>Email confirmed</dt>
+                    <dd>
+                        @if (Model.EmailConfirmed)
+                        {
+                            <span class="status-pill tone-green">Yes</span>
+                        }
+                        else
+                        {
+                            <span class="status-pill tone-amber">Not yet</span>
+                        }
+                    </dd>
+
+                    <dt>Two-factor sign-in</dt>
+                    <dd>
+                        @if (Model.TwoFactorEnabled)
+                        {
+                            <span class="status-pill tone-green">On</span>
+                        }
+                        else
+                        {
+                            <span class="status-pill tone-slate">Off</span>
+                        }
+                    </dd>
+
+                    <dt>Member since</dt>
+                    <dd>@Model.MemberSince.ToLocalTime().ToString("d MMMM yyyy")</dd>
+                </dl>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-7">
+
+        <div class="card h-100">
+
+            <div class="card-header">Contact details</div>
+
+            <div class="card-body">
+
+                <form id="profile-form" method="post">
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.FullName" class="form-label"></label>
+                        <input asp-for="Input.FullName" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="Input.FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                        <input asp-for="Input.PhoneNumber" class="form-control" autocomplete="tel" />
+                        <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                    </div>
+
+                    <button id="update-profile-button" type="submit" class="btn btn-primary">
+                        Save changes
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="card mt-3">
+
+    <div class="card-header">Sign-in and security</div>
+
+    <div class="card-body">
+        <partial name="_ManageNav" />
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

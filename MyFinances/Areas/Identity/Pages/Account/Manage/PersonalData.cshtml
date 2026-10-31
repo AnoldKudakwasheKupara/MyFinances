@@ -1,0 +1,113 @@
+@page
+@model PersonalDataModel
+@{
+    ViewData["Title"] = "Personal Data";
+    ViewData["ActivePage"] = ManageNavPages.PersonalData;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Personal data</h2>
+
+        <p class="text-muted">
+            What the portal holds against your sign-in, and how to take a
+            copy of it.
+        </p>
+
+    </div>
+
+    <div class="row g-3">
+
+        <div class="col-12">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">Take a copy</div>
+
+                <div class="card-body d-flex flex-column">
+
+                    <div class="detail-rows">
+
+                        <div class="detail-row">
+
+                            <span class="detail-icon">
+                                <i class="fas fa-id-card"></i>
+                            </span>
+
+                            <div class="detail-text">
+                                <span class="field-label">Sign-in details</span>
+                                <div class="field-value">
+                                    The username, email address and phone
+                                    number held against your account, and
+                                    whether each has been confirmed.
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="detail-row">
+
+                            <span class="detail-icon">
+                                <i class="fas fa-shield-halved"></i>
+                            </span>
+
+                            <div class="detail-text">
+                                <span class="field-label">Sign-in security</span>
+                                <div class="field-value">
+                                    Your authenticator key and any outside
+                                    accounts linked for signing in.
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <p class="text-muted small mt-3 mb-4">
+                        It downloads as a JSON file. Your employment record
+                        is not part of it: leave, training, documents and
+                        the rest are on
+                        <a asp-area=""
+                           asp-controller="MyProfile"
+                           asp-action="Index">My Profile</a>.
+                        Your sign-in can only be closed by HR, when you
+                        leave.
+                    </p>
+
+                    <form id="download-data"
+                          asp-page="DownloadPersonalData"
+                          method="post"
+                          class="mt-auto">
+
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-download"></i>
+                            Download my data
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm mt-3 mb-4">
+
+        <div class="card-header">Account settings</div>
+
+        <div class="card-body">
+            <partial name="_ManageNav" />
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,234 @@
+@page
+@using Microsoft.AspNetCore.Http.Features
+@model TwoFactorAuthenticationModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+    ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
+
+    var consentFeature = HttpContext.Features.Get<ITrackingConsentFeature>();
+    var canTrack = consentFeature?.CanTrack ?? true;
+}
+
+<div class="container-fluid">
+
+    <div class="page-head-simple">
+
+        <h2>Two-factor authentication</h2>
+
+        <p class="text-muted">
+            A second step when you sign in, so a password on its own is
+            not enough to reach your account.
+        </p>
+
+    </div>
+
+    <partial name="_StatusMessage" for="StatusMessage" />
+
+    @if (!canTrack)
+    {
+        <div class="alert alert-warning">
+            <strong>The privacy and cookie policy has not been accepted.</strong>
+            Two-factor authentication cannot be switched on until it is.
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+
+            <div class="col-lg-5">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-header">Where it stands</div>
+
+                    <div class="card-body">
+
+                        <div class="detail-rows">
+
+                            <div class="detail-row">
+
+                                <span class="detail-icon">
+                                    <i class="fas fa-shield-halved"></i>
+                                </span>
+
+                                <div class="detail-text">
+                                    <span class="field-label">Second step</span>
+                                    <div class="field-value">
+                                        @if (Model.Is2faEnabled)
+                                        {
+                                            <span class="badge bg-success">On</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Off</span>
+                                        }
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="detail-row">
+
+                                <span class="detail-icon">
+                                    <i class="fas fa-mobile-screen"></i>
+                                </span>
+
+                                <div class="detail-text">
+                                    <span class="field-label">Authenticator app</span>
+                                    <div class="field-value">
+                                        @if (Model.HasAuthenticator)
+                                        {
+                                            <span class="badge bg-success">Set up</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Not set up</span>
+                                        }
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            @if (Model.Is2faEnabled)
+                            {
+                                <div class="detail-row">
+
+                                    <span class="detail-icon">
+                                        <i class="fas fa-key"></i>
+                                    </span>
+
+                                    <div class="detail-text">
+                                        <span class="field-label">Recovery codes left</span>
+                                        <div class="field-value">
+                                            @Model.RecoveryCodesLeft
+                                        </div>
+                                    </div>
+
+                                </div>
+                            }
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-lg-7">
+
+                <div class="card shadow-sm h-100">
+
+                    <div class="card-header">What you can do</div>
+
+                    <div class="card-body">
+
+                        @if (Model.Is2faEnabled && Model.RecoveryCodesLeft == 0)
+                        {
+                            <div class="alert alert-danger">
+                                <strong>You have no recovery codes left.</strong>
+                                Generate a new set before you next need to
+                                sign in without your authenticator app.
+                            </div>
+                        }
+                        else if (Model.Is2faEnabled && Model.RecoveryCodesLeft == 1)
+                        {
+                            <div class="alert alert-danger">
+                                <strong>You have one recovery code left.</strong>
+                                Generate a new set while you still can.
+                            </div>
+                        }
+                        else if (Model.Is2faEnabled && Model.RecoveryCodesLeft <= 3)
+                        {
+                            <div class="alert alert-warning">
+                                <strong>
+                                    You have @Model.RecoveryCodesLeft recovery
+                                    codes left.
+                                </strong>
+                                It is worth generating a new set.
+                            </div>
+                        }
+
+                        <div class="d-flex flex-wrap gap-2">
+
+                            @if (!Model.HasAuthenticator)
+                            {
+                                <a id="enable-authenticator"
+                                   class="btn btn-primary"
+                                   asp-page="./EnableAuthenticator">
+                                    <i class="fas fa-mobile-screen"></i>
+                                    Add an authenticator app
+                                </a>
+                            }
+                            else
+                            {
+                                <a id="enable-authenticator"
+                                   class="btn btn-primary"
+                                   asp-page="./EnableAuthenticator">
+                                    <i class="fas fa-mobile-screen"></i>
+                                    Set up authenticator app
+                                </a>
+
+                                <a id="reset-authenticator"
+                                   class="btn btn-outline-secondary"
+                                   asp-page="./ResetAuthenticator">
+                                    Reset authenticator app
+                                </a>
+                            }
+
+                            @if (Model.Is2faEnabled)
+                            {
+                                <a class="btn btn-outline-secondary"
+                                   asp-page="./GenerateRecoveryCodes">
+                                    Reset recovery codes
+                                </a>
+
+                                <a class="btn btn-outline-danger"
+                                   asp-page="./Disable2fa">
+                                    Turn off two-factor
+                                </a>
+                            }
+
+                        </div>
+
+                        @if (Model.Is2faEnabled && Model.IsMachineRemembered)
+                        {
+                            <hr />
+
+                            <div class="field-value">
+                                This browser is remembered, so it does not
+                                ask for the second step.
+                            </div>
+
+                            <form method="post">
+                                <button type="submit"
+                                        class="btn btn-outline-secondary">
+                                    Forget this browser
+                                </button>
+                            </form>
+                        }
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    }
+
+    <div class="card shadow-sm mt-3 mb-4">
+
+        <div class="card-header">Account settings</div>
+
+        <div class="card-body">
+            <partial name="_ManageNav" />
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,56 @@
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    var hasExternalLogins =
+        (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+
+    var current = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+
+    var settings = new List<(string Page, string Icon, string Title, string Note)>
+    {
+        ("./Email", "fa-envelope", "Email",
+            "Change the address you sign in with"),
+
+        ("./ChangePassword", "fa-key", "Password",
+            "Set a new password for your account"),
+
+        ("./TwoFactorAuthentication", "fa-shield-halved",
+            "Two-factor authentication",
+            "Add a second step when signing in")
+    };
+
+    if (hasExternalLogins)
+    {
+        settings.Add(("./ExternalLogins", "fa-link", "External logins",
+            "Accounts linked for signing in"));
+    }
+
+    settings.Add(("./PersonalData", "fa-database", "Personal data",
+        "Download or delete your account data"));
+}
+
+<div class="settings-grid">
+
+    @foreach (var item in settings)
+    {
+        var page = item.Page.TrimStart('.', '/');
+
+        <a class="settings-item @(current.EndsWith("/" + page) ? "is-current" : "")"
+           asp-page="@item.Page">
+
+            <span class="settings-icon">
+                <i class="fas @item.Icon" aria-hidden="true"></i>
+            </span>
+
+            <span class="settings-text">
+                <span class="settings-title">@item.Title</span>
+                <span class="settings-note">@item.Note</span>
+            </span>
+
+            <i class="fas fa-chevron-right settings-chevron"
+               aria-hidden="true"></i>
+
+        </a>
+    }
+
+</div>
