@@ -1,0 +1,136 @@
+@model MyFinances.ViewModels.HoldingsIndexViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    ViewData["Title"] = "Assets & liabilities";
+    await Preferences.GetAsync();
+    var s = Model.Statement;
+    var groups = new[]
+    {
+        (NetWorthService.AccountsGroup, false, "bank"),
+        (NetWorthService.OwedToMeGroup, false, "person-down"),
+        (NetWorthService.AssetsGroup, false, "house"),
+        (NetWorthService.IOweGroup, true, "cash-coin"),
+        (NetWorthService.LiabilitiesGroup, true, "credit-card")
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Assets &amp; liabilities</h1>
+        <p class="page-lede">
+            Your net worth: what you have less what you owe. Accounts and debts are counted from their own pages;
+            add here only what is not tracked there, such as a house, a car or a store account.
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Create" asp-route-kind="Liability"><i class="bi bi-dash-circle" aria-hidden="true"></i> Add liability</a>
+        <a class="btn btn-primary" asp-action="Create" asp-route-kind="Asset"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add asset</a>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card is-hero">
+        <div class="stat-top"><span class="stat-label">Net worth</span><span class="stat-icon"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(s.NetWorth, s.Currency)</div>
+        <div class="stat-note">On @Preferences.Date(s.AsOf), in @s.Currency</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Total assets</span><span class="stat-icon tone-green"><i class="bi bi-plus-lg" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(s.Assets, s.Currency)</div>
+        <div class="stat-note">Accounts, money owed to you and other assets</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Total liabilities</span><span class="stat-icon tone-rose"><i class="bi bi-dash-lg" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(s.Liabilities, s.Currency)</div>
+        <div class="stat-note">Debts you owe and other liabilities</div>
+    </div>
+</div>
+
+@if (s.Unconverted.Any())
+{
+    <div class="alert alert-warning" role="status">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>
+            Left out for want of an exchange rate to @s.Currency:
+            @string.Join(", ", s.Unconverted.Select(u => $"{u.Name} ({Money.Format(u.Original, u.Currency)})")).
+            <a asp-controller="ExchangeRates" asp-action="Index">Record a rate</a>.
+        </span>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">What makes up your net worth</span></div>
+            @foreach (var (group, liability, icon) in groups)
+            {
+                var lines = s.Lines.Where(l => l.Group == group).ToList();
+                if (!lines.Any())
+                {
+                    continue;
+                }
+
+                <div class="px-3 pt-3 d-flex justify-content-between align-items-center">
+                    <span class="eyebrow"><i class="bi bi-@icon me-1" aria-hidden="true"></i>@group</span>
+                    <span class="fw-bold num @(liability ? "text-danger" : "")">@(liability ? "−" : "")@Money.Format(s.GroupTotal(group), s.Currency)</span>
+                </div>
+                <ul class="list-rows">
+                    @foreach (var l in lines)
+                    {
+                        <li class="list-row py-2">
+                            <div class="list-row-main">
+                                @if (l.Url != null)
+                                {
+                                    <a class="list-row-title" href="@l.Url">@l.Name</a>
+                                }
+                                else
+                                {
+                                    <span class="list-row-title">@l.Name</span>
+                                }
+                            </div>
+                            <div class="list-row-end">
+                                <span class="num">@Money.Format(l.Original, l.Currency)</span>
+                                @if (l.Currency != s.Currency)
+                                {
+                                    <span class="amount-sub">@(l.Converted == null ? "no rate" : "≈ " + Money.Format(l.Converted.Value, s.Currency))</span>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (!s.Lines.Any())
+            {
+                <div class="empty-state is-compact"><div class="empty-title">Nothing to count yet</div><p class="empty-text">Add accounts, debts or assets and your net worth appears here.</p></div>
+            }
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Your other assets &amp; liabilities</span><span class="panel-note">@Model.Holdings.Count item(s)</span></div>
+            @if (!Model.Holdings.Any())
+            {
+                <div class="empty-state is-compact">
+                    <div class="empty-icon"><i class="bi bi-house" aria-hidden="true"></i></div>
+                    <div class="empty-title">Nothing added yet</div>
+                    <p class="empty-text">Property, vehicles, electronics, business interests and investments not held in an account.</p>
+                </div>
+            }
+            <ul class="list-rows">
+                @foreach (var (h, latest) in Model.Holdings)
+                {
+                    <li class="list-row @(h.IsClosed ? "opacity-75" : "")">
+                        <span class="cat-icon @(h.Kind == HoldingKind.Asset ? "tone-green" : "tone-rose")"><i class="bi bi-@(h.Kind == HoldingKind.Asset ? "box-seam" : "credit-card")" aria-hidden="true"></i></span>
+                        <div class="list-row-main">
+                            <a class="list-row-title" asp-action="Details" asp-route-id="@h.Id">@h.Name</a>
+                            <span class="list-row-sub">@h.Category.Text()@(h.IsClosed ? " · sold or settled" : "") · valued @Preferences.Date(latest?.Date)</span>
+                        </div>
+                        <div class="list-row-end num fw-semibold">@Money.Format(latest?.Value ?? 0, h.Currency)</div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

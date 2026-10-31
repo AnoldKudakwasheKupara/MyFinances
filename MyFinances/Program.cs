@@ -161,6 +161,7 @@ builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<GoalService>();
 builder.Services.AddScoped<DebtService>();
 builder.Services.AddScoped<BillService>();
+builder.Services.AddScoped<NetWorthService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<EmailService>();
