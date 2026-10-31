@@ -1,0 +1,21 @@
+@model int
+@{
+    var (title, text, icon) = Model switch
+    {
+        404 => ("Page not found", "There is nothing here. It may have been deleted, or the link was mistyped.", "signpost-split"),
+        403 => ("Not yours to see", "This belongs to another account, or you are not allowed to open it.", "shield-lock"),
+        429 => ("Too many attempts", "Wait a few minutes and try again.", "hourglass-split"),
+        _ => ("Something went wrong", "MyFinances could not finish what you asked for.", "exclamation-octagon")
+    };
+
+    ViewData["Title"] = title;
+}
+
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-@icon" aria-hidden="true"></i></div>
+        <div class="empty-title">@title</div>
+        <p class="empty-text">@text</p>
+        <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Back to the dashboard</a>
+    </div>
+</div>

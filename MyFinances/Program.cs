@@ -265,9 +265,15 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 
 if (!app.Environment.IsDevelopment())
 {
+    // Unhandled errors are logged by the handler with the request
+    // they came from, and the person sees a calm page instead.
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.UseStatusCodePagesWithReExecute("/Home/Status/{0}");
+
+app.Use(SecurityHeaders.AddAsync);
 
 app.UseHttpsRedirection();
 
