@@ -8,25 +8,32 @@ using MyFinances.Services;
 namespace MyFinances.Areas.Identity.Pages.Account.Manage;
 
 /// <summary>
-/// Closes the account. Deleting the sign-in removes every financial
-/// record with it (the database cascades from the user); the receipt
-/// files are on disk, so they are removed here as well.
+/// Closes the account. The ledger is cleared first; deleting the
+/// sign-in then removes every other financial record (the database
+/// cascades from the user). Receipt files are on disk, so they are
+/// removed here as well.
 /// </summary>
 public class DeletePersonalDataModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ApplicationDbContext _context;
+    private readonly UserSetupService _setup;
     private readonly ReceiptStorage _receipts;
     private readonly ILogger<DeletePersonalDataModel> _logger;
 
     public DeletePersonalDataModel(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        ApplicationDbContext context,
+        UserSetupService setup,
         ReceiptStorage receipts,
         ILogger<DeletePersonalDataModel> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _context = context;
+        _setup = setup;
         _receipts = receipts;
         _logger = logger;
     }
@@ -69,10 +76,18 @@ public class DeletePersonalDataModel : PageModel
         }
 
         var userId = user.Id;
-        var result = await _userManager.DeleteAsync(user);
 
-        if (!result.Succeeded)
-            throw new InvalidOperationException("The account could not be closed.");
+        await _context.InTransactionAsync(async () =>
+        {
+            await _setup.ClearLedgerAsync(userId);
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded)
+                throw new InvalidOperationException("The account could not be closed.");
+
+            return result;
+        });
 
         _receipts.DeleteAll(userId);
 

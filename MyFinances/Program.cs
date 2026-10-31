@@ -10,7 +10,7 @@ using Microsoft.Net.Http.Headers;
 using MyFinances.Data;
 using MyFinances.Security;
 using MyFinances.Services;
-using Npgsql;
+using Microsoft.Data.SqlClient;
 using System.Globalization;
 using System.IO.Compression;
 
@@ -22,25 +22,21 @@ var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? PostgresUrl.ToConnectionString(
-        builder.Configuration["DATABASE_URL"]);
+    builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "No database was configured. Set a PostgreSQL connection " +
-        "string in user secrets (dotnet user-secrets set " +
-        "\"ConnectionStrings:DefaultConnection\" \"Host=...;" +
-        "Database=...;Username=...;Password=...\"), in the " +
-        "ConnectionStrings__DefaultConnection environment variable, " +
-        "or as a postgres:// address in DATABASE_URL.");
+        "No database was configured. Set a SQL Server connection " +
+        "string as ConnectionStrings:DefaultConnection, in user " +
+        "secrets, appsettings.Production.json or the " +
+        "ConnectionStrings__DefaultConnection environment variable.");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(
+    options.UseSqlServer(
         connectionString,
-        npgsql => npgsql.EnableRetryOnFailure()
+        sql => sql.EnableRetryOnFailure()
     ));
 
 builder.Services.Configure<EmailOptions>(
@@ -87,12 +83,15 @@ var cookieSecurity = builder.Environment.IsDevelopment()
     : CookieSecurePolicy.Always;
 
 /// <summary>
-/// Render ends HTTPS at its own proxy and passes the request on over
-/// plain http, saying in X-Forwarded-Proto and X-Forwarded-For how it
-/// arrived and from where. Only the last hop is taken, which is the
-/// one Render adds, so a visitor cannot pass off an address of their
-/// own choosing.
+/// Under IIS the app sees HTTPS and the visitor's address directly, so
+/// forwarded headers are ignored: trusting them there would let anyone
+/// claim any address and slip past the per-address sign-in limit.
+/// Behind a proxy that ends HTTPS itself (a container host), set
+/// ForwardedHeaders:Enabled; only the last hop is taken, the one the
+/// proxy adds.
 /// </summary>
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled");
+
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -231,24 +230,25 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.MigrateAsync();
     }
-    catch (NpgsqlException ex)
+    catch (SqlException ex)
     {
-        var target = new NpgsqlConnectionStringBuilder(connectionString);
+        var target = new SqlConnectionStringBuilder(connectionString);
 
         app.Logger.LogError(
             ex,
             "Could not prepare the database '{Database}' on '{Host}'. " +
-            "Check that PostgreSQL is running and that the login in the " +
-            "connection string can reach it and create databases. See " +
-            "README.md for first-run setup.",
-            target.Database,
-            target.Host);
+            "Check that SQL Server is running and that the login in the " +
+            "connection string can reach it (and, locally, create " +
+            "databases). See README.md for first-run setup.",
+            target.InitialCatalog,
+            target.DataSource);
 
         throw;
     }
 }
 
-app.UseForwardedHeaders();
+if (trustForwardedHeaders)
+    app.UseForwardedHeaders();
 
 // Amounts and dates read the same whatever the server's own locale is:
 // a decimal point, never a decimal comma.

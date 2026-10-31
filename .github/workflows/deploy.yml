@@ -1,0 +1,41 @@
+name: Deploy to MonsterASP.NET
+
+# Every push to master publishes the site over Web Deploy. The four
+# secrets come from the Control Panel's Deploy page (Visual Studio
+# access card); until they are set the deploy step is skipped and the
+# workflow only checks that the site builds.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    env:
+      WEBSITE_NAME: ${{ secrets.WEBSITE_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        run: dotnet publish MyFinances/MyFinances.csproj --configuration Release --runtime win-x86 --self-contained false --output ./publish
+
+      - name: Deploy over Web Deploy
+        if: env.WEBSITE_NAME != ''
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.SERVER_USERNAME }}
+          server-password: ${{ secrets.SERVER_PASSWORD }}
+          # Receipts live here on the server; a deploy never touches them.
+          skip-directory-paths: App_Data

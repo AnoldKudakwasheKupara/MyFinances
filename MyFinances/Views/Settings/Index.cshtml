@@ -105,7 +105,7 @@
                         <select asp-for="DateFormat" class="form-select">
                             @foreach (var format in DateFormats.All)
                             {
-                                <option value="@format" selected="@(format == Model.DateFormat)">@DateTime.Today.ToString(format, CultureInfo.InvariantCulture)</option>
+                                <option value="@format" selected="@(format == Model.DateFormat)">@MyFinances.Services.Clock.Today.ToString(format, CultureInfo.InvariantCulture)</option>
                             }
                         </select>
                         <span asp-validation-for="DateFormat" class="text-danger"></span>

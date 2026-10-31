@@ -91,12 +91,12 @@
                     }
 
                     <dt>Recorded</dt>
-                    <dd>@t.CreatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                    <dd>@MyFinances.Services.Clock.ToLocal(t.CreatedAt).ToString("d MMM yyyy, HH:mm")</dd>
 
                     @if (t.UpdatedAt > t.CreatedAt.AddSeconds(1))
                     {
                         <dt>Last changed</dt>
-                        <dd>@t.UpdatedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")</dd>
+                        <dd>@MyFinances.Services.Clock.ToLocal(t.UpdatedAt).ToString("d MMM yyyy, HH:mm")</dd>
                     }
                 </dl>
             </div>

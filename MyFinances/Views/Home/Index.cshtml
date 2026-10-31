@@ -9,7 +9,7 @@
 
     var c = Model.Currency;
     var name = (User.FindFirst(MyFinances.Data.ApplicationUserClaimsPrincipalFactory.FullNameClaim)?.Value ?? "").Split(' ')[0];
-    var hour = DateTime.Now.Hour;
+    var hour = MyFinances.Services.Clock.Now.Hour;
     var greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
     // A rise is good for money you have and money coming in; for spending it is not.
@@ -59,7 +59,7 @@
 
 <div class="dash-head">
     <div>
-        <div class="eyebrow">@DateTime.Today.ToString("dddd, d MMMM yyyy")</div>
+        <div class="eyebrow">@MyFinances.Services.Clock.Today.ToString("dddd, d MMMM yyyy")</div>
         <h1 class="dash-greeting">@greeting@(string.IsNullOrEmpty(name) ? "" : ", " + name)</h1>
     </div>
     @if (Model.HasAccounts)

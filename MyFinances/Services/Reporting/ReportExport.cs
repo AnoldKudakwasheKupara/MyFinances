@@ -125,7 +125,7 @@ namespace MyFinances.Services.Reporting
 
                     page.Footer().Row(row =>
                     {
-                        row.RelativeItem().Text($"Produced {DateTime.Now:d MMM yyyy, HH:mm}").FontSize(7).FontColor(muted);
+                        row.RelativeItem().Text($"Produced {Clock.Now:d MMM yyyy, HH:mm}").FontSize(7).FontColor(muted);
                         row.RelativeItem().AlignRight().Text(t =>
                         {
                             t.DefaultTextStyle(s => s.FontSize(7).FontColor(muted));

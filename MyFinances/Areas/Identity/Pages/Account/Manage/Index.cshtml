@@ -66,7 +66,7 @@
                     </dd>
 
                     <dt>Member since</dt>
-                    <dd>@Model.MemberSince.ToLocalTime().ToString("d MMMM yyyy")</dd>
+                    <dd>@MyFinances.Services.Clock.ToLocal(Model.MemberSince).ToString("d MMMM yyyy")</dd>
                 </dl>
 
             </div>

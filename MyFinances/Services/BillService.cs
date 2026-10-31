@@ -179,7 +179,7 @@ namespace MyFinances.Services
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation })
+            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 })
             {
                 // Two clicks raced: the unique index let only one through.
                 return ServiceResult.Refused($"The {dueDate:d MMM yyyy} payment has already been recorded.");

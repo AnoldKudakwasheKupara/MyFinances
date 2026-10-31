@@ -38,7 +38,7 @@ namespace MyFinances.Services
             {
                 try
                 {
-                    if (DateTime.Now.Hour >= SendFromHour)
+                    if (Clock.Now.Hour >= SendFromHour)
                         await SendDueAsync(stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)

@@ -3,8 +3,7 @@
 A personal finance web app: accounts, income, expenses, transfers,
 budgets, savings goals, debts, bills, assets and reports, in every
 currency you use. ASP.NET Core MVC on .NET 10 with ASP.NET Identity and
-EF Core on PostgreSQL, hosted on Render — set up the same way as My
-Intellego (`HrPortal`).
+EF Core on Microsoft SQL Server, hosted on MonsterASP.NET.
 
 The architecture, schema and money rules are in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -33,22 +32,9 @@ The architecture, schema and money rules are in
 
 ## First run on a new machine
 
-You need the .NET 10 SDK and PostgreSQL 16 or later, with a login that
-may create databases. Create one once, as the `postgres` superuser:
-
-```sql
-CREATE ROLE myfinances_dev LOGIN CREATEDB PASSWORD 'choose-a-password';
-```
-
-(On the original development machine the existing `hrportal_dev` login
-is used instead; any login with `CREATEDB` works.)
-
-Put the connection string in user secrets, which live outside the
-repository — a password must never go in `appsettings.json`:
-
-```bash
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=MyFinances;Username=myfinances_dev;Password=choose-a-password" --project MyFinances/MyFinances.csproj
-```
+You need the .NET 10 SDK and SQL Server. SQL Server Express LocalDB,
+which comes with Visual Studio, is enough: `appsettings.json` already
+points at it with Windows sign-in, so there is no password to set.
 
 Run it:
 
@@ -62,13 +48,21 @@ exist**. Choose **Create an account** to sign up; your account starts
 with the default income and expense categories in the currency you
 pick.
 
+To use another SQL Server, put its connection string in user secrets,
+which live outside the repository, so a password never goes in
+`appsettings.json`:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=MyFinances;User Id=myfinances;Password=choose-a-password;TrustServerCertificate=true" --project MyFinances/MyFinances.csproj
+```
+
 ### If the database will not open
 
-The startup log names the database and host it tried. Check that
-PostgreSQL is running, that the login exists and has `CREATEDB`, and
-that the password matches. `ConnectionStrings__DefaultConnection` as an
-environment variable works in place of user secrets, and so does a
-`postgres://user:password@host:5432/database` address in `DATABASE_URL`.
+The startup log names the database and server it tried. Check that SQL
+Server (or LocalDB: `sqllocaldb info`) is running and that the login
+can reach it and, locally, create databases.
+`ConnectionStrings__DefaultConnection` as an environment variable works
+in place of user secrets.
 
 ## Tests
 
@@ -78,7 +72,7 @@ dotnet test
 
 The tests create a throwaway database next to yours (named
 `myfinances_test_…`), apply the migrations, run, and drop it. They use
-the same user secret as the app, or `MYFINANCES_TEST_DB` if set. Your
+the same connection as the app, or `MYFINANCES_TEST_DB` if set. Your
 own data is never touched.
 
 ## Database changes
@@ -95,38 +89,42 @@ dotnet ef migrations add <Name> --project MyFinances/MyFinances.csproj
 
 The migration is applied automatically the next time the app starts.
 
-## Hosting on Render
+## Hosting on MonsterASP.NET
 
-[`render.yaml`](render.yaml) describes everything: a Docker web service
-in Frankfurt built from the [`Dockerfile`](Dockerfile) and a PostgreSQL
-database whose address reaches the app as `DATABASE_URL`. The sign-in
-keys are kept in the database, so restarts do not sign anyone out.
+MonsterASP.NET runs the site under IIS on Windows with its own SQL
+Server database. The free plan is enough: one site, one database,
+256 MB of memory, a `*.runasp.net` address, no card needed.
 
-Both run on Render's **free** plans, which have limits:
+One-off setup, in the [Control Panel](https://admin.monsterasp.net):
 
-- The web service sleeps after 15 minutes without visits; the next
-  visit takes about a minute to wake it.
-- There is no disk, so **uploaded receipts are lost** whenever the
-  service restarts or redeploys. Everything else is in the database.
-- A free database expires 30 days after it is created unless it is
-  upgraded, and has no backups.
+1. **Create the website** and an **MSSQL database**. Open the database
+   and copy its connection string (the *local* one: the site and the
+   database talk inside MonsterASP's network).
+2. On the website, under **Scripting → Environment variables**, add
+   `ConnectionStrings__DefaultConnection` with that connection string,
+   then restart the site. It overrides the LocalDB default in
+   `appsettings.json` and never goes in the repository.
+3. On the website's **Deploy** page, switch **WebDeploy** to *Enabled*.
+   From the *Visual Studio access* card, add four secrets to the GitHub
+   repository (*Settings → Secrets and variables → Actions*):
 
-To move to paid plans, set `plan` to e.g. `starter` on the service and
-`basic-256mb` on the database, and give the service a disk:
+   | Secret | Value |
+   | --- | --- |
+   | `WEBSITE_NAME` | the site name, `siteXXXX` |
+   | `SERVER_COMPUTER_NAME` | the server, `https://siteXXXX.siteasp.net:8172` |
+   | `SERVER_USERNAME` | the login |
+   | `SERVER_PASSWORD` | the Web Deploy password |
 
-```yaml
-    disk:
-      name: app-data
-      mountPath: /app/App_Data
-      sizeGB: 5
-```
+From then on [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+publishes every push to `master` (or run it by hand from the *Actions*
+tab). The first start creates all the tables. Until the secrets exist,
+the workflow only checks that the site builds.
 
-In the Render dashboard choose **New → Blueprint**, pick this
-repository, and apply it. Every push to `master` redeploys. Render ends
-HTTPS at its proxy; the app reads the forwarded headers and marks its
-cookies HTTPS-only.
+The sign-in keys are kept in the database, so redeploys do not sign
+anyone out, and the deploy skips `App_Data`, so receipts stay put. Dates
+follow Harare time whatever zone the server is in.
 
-Settings you may want under the service's **Environment** tab:
+Settings you may want, as environment variables in the same place:
 
 | Variable | Purpose |
 | --- | --- |
@@ -143,19 +141,13 @@ need no confirmation, and reminders are shown in the app only.
 
 ## Backups and recovery
 
-- **Database.** Render's paid PostgreSQL plans take daily backups with
-  point-in-time recovery; restore from the database's **Recovery** tab.
-  For your own copy, take one from any machine with the PostgreSQL client:
-
-  ```bash
-  pg_dump --format=custom --no-owner --file=myfinances.dump "<External Database URL from Render>"
-  ```
-
-  and restore into an empty database with
-  `pg_restore --no-owner --dbname="<database URL>" myfinances.dump`.
-- **Files.** Receipts live under `App_Data/receipts`. On the free plan
-  that folder is wiped on every restart; with a disk, Render snapshots
-  it daily.
+- **Database.** Back it up from the database's page in the Control
+  Panel. For your own copy, enable remote access there and use SQL
+  Server Management Studio (*Tasks → Export Data-tier Application*
+  makes a `.bacpac`) or `sqlpackage /Action:Export` with the *remote*
+  connection string.
+- **Files.** Receipts live under `App_Data/receipts` on the site;
+  download that folder over FTP to keep a copy.
 - **Each person's own copy.** *Settings → Download all my data* gives a
   zip with every record as JSON, the ledger as CSV and all receipts.
 

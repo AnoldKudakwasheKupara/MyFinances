@@ -59,8 +59,8 @@ namespace MyFinances.Services
             date == null ? none : Date(date.Value);
 
         public string Date(DateTime utc) =>
-            Date(DateOnly.FromDateTime(utc.ToLocalTime()));
+            Date(DateOnly.FromDateTime(Clock.ToLocal(utc)));
 
-        public static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+        public static DateOnly Today => Clock.Today;
     }
 }

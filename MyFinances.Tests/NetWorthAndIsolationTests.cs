@@ -96,5 +96,79 @@ namespace MyFinances.Tests
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => bob.Db.SaveChangesAsync());
         }
+
+        [Fact]
+        public async Task Closing_an_account_removes_every_record_and_leaves_others_alone()
+        {
+            await using var alice = await Person.SignUpAsync(database);
+            await using var bob = await Person.SignUpAsync(database);
+
+            var bank = await alice.AccountAsync("Bank", Currency.USD, 1000);
+            var savings = await alice.AccountAsync("Savings", Currency.USD);
+            await alice.RecordAsync(TransactionType.Expense, 20, bank, "2026-02-01", "Shopping");
+            await alice.RecordAsync(TransactionType.Transfer, 50, bank, "2026-02-02", to: savings);
+            await alice.RateAsync(Currency.ZAR, Currency.USD, 0.055m, "2026-01-01");
+
+            var goal = new GoalFormViewModel { Name = "Fund", TargetAmount = 500, Currency = Currency.USD, AccountId = savings };
+            await alice.Goals.SaveAsync(null, goal);
+            await alice.Goals.ContributeAsync(goal.Id!.Value, new ContributionFormViewModel { Amount = 30, Date = new DateOnly(2026, 2, 3), OtherAccountId = bank });
+
+            var debt = new DebtFormViewModel
+            {
+                Direction = DebtDirection.IOwe, Description = "Loan", Counterparty = "Bank",
+                OriginalAmount = 300, Currency = Currency.USD, StartDate = new DateOnly(2026, 1, 5), DisbursementAccountId = bank
+            };
+            await alice.Debts.CreateAsync(debt);
+            await alice.Debts.PayAsync(debt.Id!.Value, new DebtPaymentFormViewModel { Principal = 100, Interest = 5, AccountId = bank, Date = new DateOnly(2026, 2, 5) });
+
+            var bill = new BillFormViewModel
+            {
+                Name = "Internet", Amount = 45, Currency = Currency.USD, AccountId = bank,
+                CategoryId = await alice.CategoryAsync("Internet and Mobile Data"),
+                Frequency = Frequency.Monthly, NextDueDate = new DateOnly(2026, 3, 28)
+            };
+            await alice.Bills.SaveAsync(null, bill);
+            await alice.Bills.PayAsync(bill.Id!.Value, new BillPaymentFormViewModel { Amount = 45, PaidDate = new DateOnly(2026, 3, 27), RecordExpense = true, AccountId = bank });
+
+            alice.Db.Holdings.Add(new Holding
+            {
+                Kind = HoldingKind.Asset, Name = "Car", Category = HoldingCategory.Vehicle, Currency = Currency.USD,
+                Valuations = { new HoldingValuation { Date = new DateOnly(2026, 1, 1), Value = 8000 } }
+            });
+            await alice.Db.SaveChangesAsync();
+
+            var bobsBank = await bob.AccountAsync("Bob's bank", Currency.USD, 10);
+            await bob.RecordAsync(TransactionType.Income, 5, bobsBank, "2026-02-01", "Salary");
+
+            // As the close-account page does it, in a fresh request: the
+            // ledger, then the sign-in, together.
+            await using (var request = database.NewContext(alice.User))
+            {
+                var setup = new UserSetupService(request, alice.User);
+                await request.InTransactionAsync(async () =>
+                {
+                    await setup.ClearLedgerAsync(alice.Id);
+                    request.Users.Remove(await request.Users.SingleAsync(u => u.Id == alice.Id));
+                    return await request.SaveChangesAsync();
+                });
+            }
+
+            alice.Db.ChangeTracker.Clear();
+            Assert.Empty(await alice.Db.Accounts.ToListAsync());
+            Assert.Empty(await alice.Db.Transactions.ToListAsync());
+            Assert.Empty(await alice.Db.Categories.ToListAsync());
+            Assert.Empty(await alice.Db.ExchangeRates.ToListAsync());
+            Assert.Empty(await alice.Db.SavingsGoals.ToListAsync());
+            Assert.Empty(await alice.Db.GoalContributions.ToListAsync());
+            Assert.Empty(await alice.Db.Debts.ToListAsync());
+            Assert.Empty(await alice.Db.DebtPayments.ToListAsync());
+            Assert.Empty(await alice.Db.Bills.ToListAsync());
+            Assert.Empty(await alice.Db.BillPayments.ToListAsync());
+            Assert.Empty(await alice.Db.Holdings.ToListAsync());
+            Assert.Empty(await alice.Db.HoldingValuations.ToListAsync());
+            Assert.Empty(await alice.Db.UserSettings.ToListAsync());
+
+            Assert.Equal(15, await bob.BalanceAsync(bobsBank));
+        }
     }
 }
