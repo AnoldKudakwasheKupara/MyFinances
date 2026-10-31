@@ -1,0 +1,42 @@
+@page
+@model DeletePersonalDataModel
+@{
+    ViewData["Title"] = "Close your account";
+    ViewData["ActivePage"] = ManageNavPages.PersonalData;
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Close your account</h1>
+        <p class="page-lede">This deletes your sign-in and every record in MyFinances, including receipts. It cannot be undone.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <div class="alert alert-warning" role="alert">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            <span>
+                Take a copy first if you may need it:
+                <a asp-area="" asp-controller="Settings" asp-action="Export">download all my data</a>.
+            </span>
+        </div>
+
+        <form id="delete-user" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            @if (Model.RequirePassword)
+            {
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label">Confirm with your password</label>
+                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" required />
+                </div>
+            }
+
+            <div class="form-actions">
+                <a class="btn btn-light" asp-page="./PersonalData">Keep my account</a>
+                <button class="btn btn-danger" type="submit">Delete everything and close</button>
+            </div>
+        </form>
+    </div>
+</div>

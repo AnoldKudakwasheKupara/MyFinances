@@ -1093,12 +1093,12 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyFinances.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("MyFinances.Data.ApplicationUser", null)
@@ -1134,7 +1134,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("MyFinances.Data.ApplicationUser", null)
@@ -1169,7 +1169,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyFinances.Entities.Debt", "Debt")
                         .WithMany("Payments")
@@ -1245,7 +1245,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyFinances.Data.ApplicationUser", null)
                         .WithMany()
@@ -1261,7 +1261,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("MyFinances.Entities.BillPayment", "BillPayment")
@@ -1272,7 +1272,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyFinances.Entities.Debt", "Debt")
                         .WithMany("Transactions")
@@ -1292,7 +1292,7 @@ namespace MyFinances.Migrations
                     b.HasOne("MyFinances.Entities.Account", "ToAccount")
                         .WithMany()
                         .HasForeignKey("ToAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("MyFinances.Data.ApplicationUser", null)
                         .WithMany()

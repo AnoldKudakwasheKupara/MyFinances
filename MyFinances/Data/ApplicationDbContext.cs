@@ -106,20 +106,22 @@ namespace MyFinances.Data
                 e.Property(t => t.ReceiptFileName).HasMaxLength(255);
                 e.Property(t => t.ReceiptContentType).HasMaxLength(100);
 
-                // History must never lose its account or category, so
-                // neither can be deleted while a row points at it.
+                // History must never lose its account or category; the
+                // services refuse to delete one that is in use. NO ACTION
+                // rather than RESTRICT so closing a whole account, which
+                // removes everything in one statement, is still allowed.
                 e.HasOne(t => t.Account)
                     .WithMany()
                     .HasForeignKey(t => t.AccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 e.HasOne(t => t.ToAccount)
                     .WithMany()
                     .HasForeignKey(t => t.ToAccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 e.HasOne(t => t.Category)
                     .WithMany()
                     .HasForeignKey(t => t.CategoryId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 // Rows another module wrote go when that record goes.
                 e.HasOne(t => t.BillPayment)
@@ -153,7 +155,7 @@ namespace MyFinances.Data
                 e.HasOne(b => b.Category)
                     .WithMany()
                     .HasForeignKey(b => b.CategoryId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 Owned(e);
             });
 
@@ -166,7 +168,7 @@ namespace MyFinances.Data
                 e.HasOne(g => g.Account)
                     .WithMany()
                     .HasForeignKey(g => g.AccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 Owned(e);
             });
 
@@ -203,7 +205,7 @@ namespace MyFinances.Data
                 e.HasOne(p => p.Account)
                     .WithMany()
                     .HasForeignKey(p => p.AccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 Owned(e);
             });
 
@@ -216,11 +218,11 @@ namespace MyFinances.Data
                 e.HasOne(b => b.Category)
                     .WithMany()
                     .HasForeignKey(b => b.CategoryId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 e.HasOne(b => b.Account)
                     .WithMany()
                     .HasForeignKey(b => b.AccountId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.NoAction);
                 e.HasIndex(b => new { b.UserId, b.NextDueDate });
                 Owned(e);
             });

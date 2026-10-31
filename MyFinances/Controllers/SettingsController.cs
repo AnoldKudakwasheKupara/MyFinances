@@ -120,6 +120,13 @@ namespace MyFinances.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        public async Task<IActionResult> Export([FromServices] DataExportService export)
+        {
+            var zip = await export.ZipAsync();
+
+            return File(zip, "application/zip", $"myfinances-{UserPreferences.Today:yyyy-MM-dd}.zip");
+        }
+
         private async Task<UserSettings> LoadAsync()
         {
             var settings = await _context.UserSettings.FirstOrDefaultAsync();

@@ -166,6 +166,7 @@ builder.Services.AddScoped<ReminderService>();
 builder.Services.AddScoped<MyFinances.Services.Reporting.Analytics>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<MyFinances.Services.Reporting.ReportService>();
+builder.Services.AddScoped<DataExportService>();
 builder.Services.AddHostedService<ReminderEmailWorker>();
 
 builder.Services.AddHttpClient();

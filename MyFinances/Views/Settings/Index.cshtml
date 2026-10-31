@@ -8,7 +8,8 @@
     {
         (Url.Action("Index", "Categories")!, "tags", "Categories", "Income and expense categories"),
         (Url.Action("Index", "ExchangeRates")!, "currency-exchange", "Exchange rates", "The rates your totals convert with"),
-        (Url.Page("/Account/Manage/Index", new { area = "Identity" })!, "person-circle", "Profile and security", "Email, password and two-factor sign-in")
+        (Url.Page("/Account/Manage/Index", new { area = "Identity" })!, "person-circle", "Profile and security", "Email, password and two-factor sign-in"),
+        (Url.Action("Export", "Settings")!, "download", "Download all my data", "Every record and receipt in one zip, as a backup")
     };
 }
 
