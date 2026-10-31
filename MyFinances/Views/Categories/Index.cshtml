@@ -1,0 +1,114 @@
+@model CategoriesViewModel
+@{
+    ViewData["Title"] = "Categories";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Settings", Url.Action("Index", "Settings")!) };
+    var editing = Model.Form.Id != null;
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Categories</h1>
+        <p class="page-lede">
+            Income and expense categories are kept apart, so spending can never be filed as income.
+            A category in use can be deactivated: its history stays, but new transactions cannot pick it.
+        </p>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-xl-8">
+        @foreach (var (title, rows) in new[] { ("Expense categories", Model.Expense), ("Income categories", Model.Income) })
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <span class="panel-title">@title</span>
+                    <span class="panel-note">@rows.Count(r => r.Category.IsActive) active</span>
+                </div>
+                <ul class="list-rows">
+                    @foreach (var row in rows)
+                    {
+                        var c = row.Category;
+                        <li class="list-row @(c.IsActive ? "" : "opacity-75")">
+                            <span class="cat-icon @(c.Kind == CategoryKind.Income ? "tone-green" : "tone-teal")"><i class="bi bi-@c.Icon" aria-hidden="true"></i></span>
+                            <div class="list-row-main">
+                                <span class="list-row-title">@c.Name</span>
+                                <span class="list-row-sub">
+                                    @(row.TransactionCount == 0 ? "Not used yet" : $"{row.TransactionCount} transaction(s)")
+                                    @if (!c.IsActive)
+                                    {
+                                        <span class="status-pill tone-slate ms-1">Deactivated</span>
+                                    }
+                                </span>
+                            </div>
+                            <div class="list-row-end d-flex gap-1">
+                                <a class="btn btn-sm btn-light" asp-route-edit="@c.Id" aria-label="Edit @c.Name"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                <form asp-action="Active" method="post">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <input type="hidden" name="active" value="@(!c.IsActive)" />
+                                    <button class="btn btn-sm btn-light" type="submit">@(c.IsActive ? "Deactivate" : "Activate")</button>
+                                </form>
+                                @if (row.TransactionCount == 0)
+                                {
+                                    <form asp-action="Delete" method="post" data-confirm="Delete the @c.Name category?">
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button class="btn btn-sm btn-light" type="submit" aria-label="Delete @c.Name"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card" id="category-form">
+            <div class="card-header"><span class="panel-title">@(editing ? "Edit category" : "New category")</span></div>
+            <div class="card-body">
+                <form asp-action="Save" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <input type="hidden" asp-for="Form.Id" />
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Name" class="form-label">Name</label>
+                        <input asp-for="Form.Name" class="form-control" />
+                        <span asp-validation-for="Form.Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Kind" class="form-label">Kind</label>
+                        <select asp-for="Form.Kind" class="form-select" asp-items="MyFinances.Services.EnumText.Options<CategoryKind>(Model.Form.Kind)"></select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Icon" class="form-label">Icon</label>
+                        <div class="d-flex flex-wrap gap-1" role="radiogroup" aria-label="Icon">
+                            @foreach (var icon in CategoriesViewModel.Icons)
+                            {
+                                var id = "icon-" + icon;
+                                <input type="radio" class="btn-check" name="Form.Icon" id="@id" value="@icon" checked="@(Model.Form.Icon == icon)" />
+                                <label class="btn btn-sm btn-light" for="@id" title="@icon"><i class="bi bi-@icon" aria-hidden="true"></i><span class="visually-hidden">@icon</span></label>
+                            }
+                        </div>
+                        <span asp-validation-for="Form.Icon" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-actions">
+                        @if (editing)
+                        {
+                            <a class="btn btn-light" asp-action="Index">Cancel</a>
+                        }
+                        <button class="btn btn-primary" type="submit">@(editing ? "Save" : "Add category")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

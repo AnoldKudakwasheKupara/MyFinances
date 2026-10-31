@@ -1,0 +1,138 @@
+@model ExchangeRatesViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    ViewData["Title"] = "Exchange rates";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Settings", Url.Action("Index", "Settings")!) };
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Exchange rates</h1>
+        <p class="page-lede">
+            MyFinances never assumes two currencies are worth the same. Totals in @Model.ReportingCurrency
+            use the rates you record here: each transaction is converted at the latest rate on or before its own date,
+            and keeps that conversion.
+        </p>
+    </div>
+</div>
+
+@if (Model.MissingToday.Any())
+{
+    <div class="alert alert-warning" role="status">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>
+            You hold money in @string.Join(", ", Model.MissingToday) but there is no rate to @Model.ReportingCurrency yet,
+            so those balances are left out of your totals.
+        </span>
+    </div>
+}
+
+@if (Model.Unconverted > 0)
+{
+    <div class="alert alert-info" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>
+            @Model.Unconverted transaction(s) have no rate on their date and are left out of @Model.ReportingCurrency totals.
+            Add a rate dated on or before them and they will be converted.
+        </span>
+    </div>
+}
+
+<div class="row g-3">
+
+    <div class="col-xl-8">
+        <div class="card">
+            <div class="card-header">
+                <span class="panel-title">Recorded rates</span>
+                <span class="panel-note">@Model.Rates.Count rate(s)</span>
+            </div>
+
+            @if (!Model.Rates.Any())
+            {
+                <div class="empty-state is-compact">
+                    <div class="empty-icon"><i class="bi bi-currency-exchange" aria-hidden="true"></i></div>
+                    <div class="empty-title">No rates yet</div>
+                    <p class="empty-text">If all your accounts are in @Model.ReportingCurrency you do not need any.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-stack">
+                        <thead>
+                            <tr>
+                                <th>Effective from</th>
+                                <th>Pair</th>
+                                <th class="text-end">Rate</th>
+                                <th class="text-end">Inverse</th>
+                                <th><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rate in Model.Rates)
+                            {
+                                <tr>
+                                    <td data-label="Effective from">@Preferences.Date(rate.EffectiveDate)</td>
+                                    <td data-label="Pair"><span class="currency-tag">@rate.FromCurrency</span> → <span class="currency-tag">@rate.ToCurrency</span></td>
+                                    <td data-label="Rate" class="text-end num">1 = @rate.Rate.ToString("#,##0.########")</td>
+                                    <td data-label="Inverse" class="text-end num text-muted">@((1m / rate.Rate).ToString("#,##0.######"))</td>
+                                    <td data-label="" class="text-end">
+                                        <form asp-action="Delete" asp-route-id="@rate.Id" method="post" data-confirm="Remove this rate? Transactions already converted with it keep their conversion.">
+                                            <button class="btn btn-sm btn-light" type="submit" aria-label="Remove rate"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Record a rate</span></div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label asp-for="Form.FromCurrency" class="form-label"></label>
+                            <select asp-for="Form.FromCurrency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Form.FromCurrency)"></select>
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="Form.ToCurrency" class="form-label"></label>
+                            <select asp-for="Form.ToCurrency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Form.ToCurrency)"></select>
+                        </div>
+                        <span asp-validation-for="Form.ToCurrency" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Rate" class="form-label">1 unit of “From” is worth</label>
+                        <input asp-for="Form.Rate" class="form-control num" type="number" step="any" min="0" inputmode="decimal" />
+                        <span asp-validation-for="Form.Rate" class="text-danger"></span>
+                        <div class="form-text">For example 1 USD = 26.75 ZWG. The reverse direction is worked out for you.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.EffectiveDate" class="form-label"></label>
+                        <input asp-for="Form.EffectiveDate" class="form-control" type="date" />
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" type="submit">Save rate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

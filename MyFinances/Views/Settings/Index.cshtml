@@ -1,0 +1,185 @@
+@model SettingsViewModel
+@using System.Globalization
+@using MyFinances.Services
+@{
+    ViewData["Title"] = "Settings";
+
+    var tiles = new List<(string Url, string Icon, string Title, string Note)>
+    {
+        (Url.Action("Index", "Categories")!, "tags", "Categories", "Income and expense categories"),
+        (Url.Action("Index", "ExchangeRates")!, "currency-exchange", "Exchange rates", "The rates your totals convert with"),
+        (Url.Page("/Account/Manage/Index", new { area = "Identity" })!, "person-circle", "Profile and security", "Email, password and two-factor sign-in")
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Settings</h1>
+        <p class="page-lede">How MyFinances shows your money, and the lists behind it.</p>
+    </div>
+</div>
+
+<div class="settings-grid mb-4">
+    @foreach (var tile in tiles)
+    {
+        <a class="settings-item" href="@tile.Url">
+            <span class="settings-icon"><i class="bi bi-@tile.Icon" aria-hidden="true"></i></span>
+            <span class="settings-text">
+                <span class="settings-title">@tile.Title</span>
+                <span class="settings-note">@tile.Note</span>
+            </span>
+            <i class="bi bi-chevron-right settings-chevron" aria-hidden="true"></i>
+        </a>
+    }
+</div>
+
+<form method="post">
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="row g-3">
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><span class="panel-title">You and your money</span></div>
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label"></label>
+                        <input asp-for="FullName" class="form-control" autocomplete="name" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReportingCurrency" class="form-label"></label>
+                        <select asp-for="ReportingCurrency" class="form-select">
+                            @foreach (var currency in Enum.GetValues<Currency>())
+                            {
+                                <option value="@currency" selected="@(currency == Model.ReportingCurrency)">@currency — @Money.Name(currency)</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            Totals, the dashboard and reports are shown in this currency. Changing it converts every
+                            transaction again, each at the rate recorded for its own date.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultAccountId" class="form-label"></label>
+                        <select asp-for="DefaultAccountId" class="form-select">
+                            <option value="">No default</option>
+                            @foreach (var account in Model.Accounts)
+                            {
+                                <option value="@account.Id" selected="@(account.Id == Model.DefaultAccountId)">@account.Name (@account.Currency)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="DefaultAccountId" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input asp-for="ShowArchivedAccounts" class="form-check-input" role="switch" />
+                        <label asp-for="ShowArchivedAccounts" class="form-check-label"></label>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><span class="panel-title">Display</span></div>
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label asp-for="Theme" class="form-label">Appearance</label>
+                        <select asp-for="Theme" class="form-select">
+                            <option value="Light">Light</option>
+                            <option value="Dark">Dark</option>
+                            <option value="System">Match my device</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DateFormat" class="form-label"></label>
+                        <select asp-for="DateFormat" class="form-select">
+                            @foreach (var format in DateFormats.All)
+                            {
+                                <option value="@format" selected="@(format == Model.DateFormat)">@DateTime.Today.ToString(format, CultureInfo.InvariantCulture)</option>
+                            }
+                        </select>
+                        <span asp-validation-for="DateFormat" class="text-danger"></span>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-sm-6 mb-3">
+                            <label asp-for="FinancialYearStartMonth" class="form-label"></label>
+                            <select asp-for="FinancialYearStartMonth" class="form-select">
+                                @for (var m = 1; m <= 12; m++)
+                                {
+                                    <option value="@m" selected="@(m == Model.FinancialYearStartMonth)">@CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label asp-for="DefaultDashboardPeriod" class="form-label"></label>
+                            <select asp-for="DefaultDashboardPeriod" class="form-select" asp-items="EnumText.Options<DashboardPeriod>(Model.DefaultDashboardPeriod)"></select>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><span class="panel-title">Budgets</span></div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-sm-6">
+                            <label asp-for="BudgetWarningPercent" class="form-label"></label>
+                            <input asp-for="BudgetWarningPercent" class="form-control" type="number" min="1" max="99" />
+                            <span asp-validation-for="BudgetWarningPercent" class="text-danger"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="BudgetLimitPercent" class="form-label"></label>
+                            <input asp-for="BudgetLimitPercent" class="form-control" type="number" min="50" max="200" />
+                            <span asp-validation-for="BudgetLimitPercent" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">Budgets turn amber at the warning and red at the limit.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><span class="panel-title">Reminders</span></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="BillReminderDays" class="form-label"></label>
+                        <input asp-for="BillReminderDays" class="form-control" type="number" min="0" max="60" />
+                        <div class="form-text">The starting value for new bills. Each bill can have its own.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input asp-for="EmailReminders" class="form-check-input" role="switch" disabled="@(!Model.EmailAvailable)" />
+                        <label asp-for="EmailReminders" class="form-check-label"></label>
+                    </div>
+                    @if (!Model.EmailAvailable)
+                    {
+                        <div class="form-text">Email is not set up on this server yet, so reminders show in the app only.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save settings</button>
+    </div>
+
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

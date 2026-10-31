@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -10,7 +11,11 @@ using MyFinances.Data;
 using MyFinances.Security;
 using MyFinances.Services;
 using Npgsql;
+using System.Globalization;
 using System.IO.Compression;
+
+CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-GB");
+CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-GB");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,6 +153,7 @@ builder.Services.AddScoped<UserPreferences>();
 builder.Services.AddScoped<CurrencyService>();
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<CategoryService>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<EmailService>();
@@ -228,6 +234,18 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseForwardedHeaders();
+
+// Amounts and dates read the same whatever the server's own locale is:
+// a decimal point, never a decimal comma.
+var culture = new CultureInfo("en-GB");
+
+app.UseRequestLocalization(new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture(culture),
+    SupportedCultures = [culture],
+    SupportedUICultures = [culture],
+    RequestCultureProviders = []
+});
 
 if (!app.Environment.IsDevelopment())
 {
