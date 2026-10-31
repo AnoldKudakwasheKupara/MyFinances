@@ -1,0 +1,96 @@
+@model AccountsIndexViewModel
+@using MyFinances.Services
+@{
+    ViewData["Title"] = "Accounts";
+    var total = Model.Total;
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Accounts</h1>
+        <p class="page-lede">Every place you keep money. Balances are worked out from the opening balance and every transaction since.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add account</a>
+    </div>
+</div>
+
+@if (!Model.Active.Any() && !Model.Archived.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-bank" aria-hidden="true"></i></div>
+            <div class="empty-title">Add your first account</div>
+            <p class="empty-text">
+                Start with where your money is today: a bank account, a mobile money
+                wallet or the cash in your pocket, with its balance on the day you start.
+            </p>
+            <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add account</a>
+        </div>
+    </div>
+    return;
+}
+
+<div class="stat-grid">
+
+    <div class="stat-card is-hero">
+        <div class="stat-top">
+            <span class="stat-label">Total available</span>
+            <span class="stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+        </div>
+        <div class="stat-value num">@Money.Format(total.Amount, total.Currency)</div>
+        <div class="stat-note">
+            @if (total.IsComplete)
+            {
+                <span>Active accounts, in @total.Currency at today's recorded rates</span>
+            }
+            else
+            {
+                <span>
+                    Leaves out @string.Join(", ", total.Unconverted.Select(u => Money.Format(u.Value, u.Key))):
+                    no exchange rate to @total.Currency recorded yet.
+                </span>
+            }
+        </div>
+    </div>
+
+    @foreach (var (currency, amount) in Model.ByCurrency)
+    {
+        <div class="stat-card">
+            <div class="stat-top">
+                <span class="stat-label">Held in @currency</span>
+                <span class="currency-tag">@currency</span>
+            </div>
+            <div class="stat-value num">@Money.Format(amount, currency)</div>
+            <div class="stat-note">@Model.Active.Count(a => a.Currency == currency) active account(s), original currency</div>
+        </div>
+    }
+
+</div>
+
+<div class="account-grid">
+    @foreach (var item in Model.Active)
+    {
+        <partial name="_AccountCard" model="item" />
+    }
+</div>
+
+@if (Model.Archived.Any())
+{
+    <div class="d-flex align-items-center justify-content-between mt-4 mb-3">
+        <h2 class="h6 fw-bold mb-0">Archived (@Model.Archived.Count)</h2>
+        <a class="panel-link" asp-route-archived="@(!Model.ShowArchived)">
+            @(Model.ShowArchived ? "Hide" : "Show")
+        </a>
+    </div>
+
+    @if (Model.ShowArchived)
+    {
+        <div class="account-grid">
+            @foreach (var item in Model.Archived)
+            {
+                <partial name="_AccountCard" model="item" />
+            }
+        </div>
+    }
+}

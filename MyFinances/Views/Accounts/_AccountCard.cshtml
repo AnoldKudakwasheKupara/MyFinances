@@ -1,0 +1,17 @@
+@model MyFinances.Services.AccountBalance
+@using MyFinances.Services
+
+<a class="account-card @(Model.Account.IsArchived ? "is-archived" : "")" asp-action="Details" asp-route-id="@Model.Account.Id">
+    <div class="account-card-top">
+        <span class="cat-icon @Display.AccountTone(Model.Account.Type)"><i class="bi bi-@Display.AccountIcon(Model.Account.Type)" aria-hidden="true"></i></span>
+        <div class="flex-grow-1 min-w-0">
+            <div class="list-row-title">@Model.Account.Name</div>
+            <div class="list-row-sub">@Model.Account.Type.Text()@(Model.Account.IsArchived ? " · archived" : "")</div>
+        </div>
+        <span class="currency-tag">@Model.Currency</span>
+    </div>
+    <div>
+        <div class="eyebrow">Balance</div>
+        <div class="account-balance num @(Model.Balance < 0 ? "text-danger" : "")">@Money.Format(Model.Balance, Model.Currency)</div>
+    </div>
+</a>

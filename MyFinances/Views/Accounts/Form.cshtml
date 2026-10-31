@@ -1,0 +1,87 @@
+@model AccountFormViewModel
+@using MyFinances.Services
+@{
+    var editing = Model.Id != null;
+    ViewData["Title"] = editing ? "Edit account" : "Add account";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Accounts", Url.Action("Index")!) };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@ViewData["Title"]</h1>
+        <p class="page-lede">
+            @(editing
+                ? "Change the details. The balance always follows from the opening balance and the transactions since."
+                : "Enter the balance the account had on the day you start tracking it.")
+        </p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+
+        <form method="post">
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="row g-3">
+
+                <div class="col-md-7">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" placeholder="e.g. CABS current account" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-5">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" class="form-select" asp-items="EnumText.Options<AccountType>(Model.Type)"></select>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label"></label>
+                    @if (Model.CurrencyLocked)
+                    {
+                        <input type="hidden" asp-for="Currency" />
+                        <input class="form-control" value="@Model.Currency" disabled />
+                        <div class="form-text">Fixed once money has moved.</div>
+                    }
+                    else
+                    {
+                        <select asp-for="Currency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Currency)"></select>
+                    }
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="OpeningBalance" class="form-label"></label>
+                    <input asp-for="OpeningBalance" class="form-control num" type="number" step="0.01" inputmode="decimal" />
+                    <span asp-validation-for="OpeningBalance" class="text-danger"></span>
+                    <div class="form-text">Negative for an overdrawn account.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="OpeningDate" class="form-label"></label>
+                    <input asp-for="OpeningDate" class="form-control" type="date" />
+                    <span asp-validation-for="OpeningDate" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="2" placeholder="Optional — account number ending, branch, what it is for"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <a class="btn btn-light" href="@(editing ? Url.Action("Details", new { id = Model.Id }) : Url.Action("Index"))">Cancel</a>
+                <button type="submit" class="btn btn-primary">@(editing ? "Save changes" : "Add account")</button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

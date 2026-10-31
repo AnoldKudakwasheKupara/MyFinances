@@ -1,0 +1,115 @@
+@model AccountDetailsViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    var account = Model.Account;
+    ViewData["Title"] = account.Name;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Accounts", Url.Action("Index")!) };
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div class="d-flex align-items-center gap-3">
+        <span class="cat-icon @Display.AccountTone(account.Type)" style="width:48px;height:48px;font-size:1.3rem;border-radius:14px">
+            <i class="bi bi-@Display.AccountIcon(account.Type)" aria-hidden="true"></i>
+        </span>
+        <div>
+            <h1 class="page-heading">@account.Name</h1>
+            <p class="page-lede mt-1">
+                @account.Type.Text() · <span class="currency-tag">@account.Currency</span>
+                @if (account.IsArchived)
+                {
+                    <span class="status-pill tone-slate ms-1">Archived</span>
+                }
+            </p>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Edit" asp-route-id="@account.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <form asp-action="Archive" asp-route-id="@account.Id" method="post" class="d-inline">
+            <input type="hidden" name="archived" value="@(!account.IsArchived)" />
+            <button type="submit" class="btn btn-light">
+                <i class="bi bi-@(account.IsArchived ? "box-arrow-up" : "archive")" aria-hidden="true"></i>
+                @(account.IsArchived ? "Restore" : "Archive")
+            </button>
+        </form>
+        @if (Model.CanDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@account.Id" method="post" class="d-inline"
+                  data-confirm="Delete @account.Name? It has no history, so nothing else changes.">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card is-hero">
+        <div class="stat-top">
+            <span class="stat-label">Current balance</span>
+            <span class="stat-icon"><i class="bi bi-wallet2" aria-hidden="true"></i></span>
+        </div>
+        <div class="stat-value num">@Money.Format(Model.Balance, account.Currency)</div>
+        <div class="stat-note">Opened @Preferences.Date(account.OpeningDate) with @Money.Format(account.OpeningBalance, account.Currency)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">In this month</span>
+            <span class="stat-icon tone-green"><i class="bi bi-arrow-down-left" aria-hidden="true"></i></span>
+        </div>
+        <div class="stat-value num">@Money.Format(Model.InThisMonth, account.Currency)</div>
+        <div class="stat-note">Income, transfers in and money received</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">Out this month</span>
+            <span class="stat-icon tone-rose"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+        </div>
+        <div class="stat-value num">@Money.Format(Model.OutThisMonth, account.Currency)</div>
+        <div class="stat-note">Spending, transfers out and payments</div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(account.Description))
+{
+    <p class="text-muted">@account.Description</p>
+}
+
+<div class="card">
+    <div class="card-header">
+        <span class="panel-title">Recent activity</span>
+        <span class="panel-note">@Model.TransactionCount transaction(s) in total</span>
+    </div>
+
+    @if (!Model.Recent.Any())
+    {
+        <div class="empty-state is-compact">
+            <div class="empty-icon"><i class="bi bi-receipt" aria-hidden="true"></i></div>
+            <div class="empty-title">No transactions yet</div>
+            <p class="empty-text">Money in, out and transfers for this account will show here.</p>
+        </div>
+    }
+    else
+    {
+        <ul class="list-rows">
+            @foreach (var t in Model.Recent)
+            {
+                var (effect, currency) = Display.Effect(t, account.Id);
+                var other = t.Type == TransactionType.Transfer
+                    ? (t.AccountId == account.Id ? "To " + t.ToAccount?.Name : "From " + t.Account?.Name)
+                    : t.Category?.Name ?? t.Type.Text();
+
+                <li class="list-row">
+                    <span class="cat-icon @Display.TypeTone(t.Type)"><i class="bi bi-@Display.TypeIcon(t.Type)" aria-hidden="true"></i></span>
+                    <div class="list-row-main">
+                        <span class="list-row-title">@t.Description</span>
+                        <span class="list-row-sub">@Preferences.Date(t.Date) · @other</span>
+                    </div>
+                    <div class="list-row-end">
+                        <span class="amount num @Display.AmountClass(t, effect)">@Money.Signed(effect, currency)</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
