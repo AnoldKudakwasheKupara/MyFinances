@@ -1,0 +1,99 @@
+@model DebtsIndexViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    ViewData["Title"] = "Debts & loans";
+    await Preferences.GetAsync();
+
+    string Total(ConvertedTotal t) => Money.Format(t.Amount, t.Currency);
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">Debts &amp; loans</h1>
+        <p class="page-lede">What you owe and what is owed to you. Repayments split principal from interest, so only interest counts as a cost or earnings.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Create" asp-route-direction="OwedToMe"><i class="bi bi-person-down" aria-hidden="true"></i> Money owed to me</a>
+        <a class="btn btn-primary" asp-action="Create" asp-route-direction="IOwe"><i class="bi bi-plus-lg" aria-hidden="true"></i> Money I owe</a>
+    </div>
+</div>
+
+@if (!Model.IOwe.Any() && !Model.OwedToMe.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></div>
+            <div class="empty-title">No debts recorded</div>
+            <p class="empty-text">Track a loan, a credit card or money a friend borrowed, and see what is left and when it is due.</p>
+        </div>
+    </div>
+    return;
+}
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">You owe</span><span class="stat-icon tone-rose"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Total(Model.TotalIOwe)</div>
+        <div class="stat-note">@(Model.TotalIOwe.IsComplete ? "Outstanding on active debts" : "Some debts have no rate to " + Model.TotalIOwe.Currency + " and are left out")</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Owed to you</span><span class="stat-icon tone-green"><i class="bi bi-arrow-down-left" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Total(Model.TotalOwedToMe)</div>
+        <div class="stat-note">@(Model.TotalOwedToMe.IsComplete ? "Outstanding on active loans you made" : "Some loans have no rate to " + Model.TotalOwedToMe.Currency + " and are left out")</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Overdue</span><span class="stat-icon tone-amber"><i class="bi bi-alarm" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@(Model.IOwe.Concat(Model.OwedToMe).Count(s => s.IsOverdue))</div>
+        <div class="stat-note">Past their due date with money outstanding</div>
+    </div>
+</div>
+
+@foreach (var (title, list) in new[] { ("Money I owe", Model.IOwe), ("Money owed to me", Model.OwedToMe) })
+{
+    if (!list.Any())
+    {
+        continue;
+    }
+
+    <div class="card mb-3">
+        <div class="card-header"><span class="panel-title">@title</span><span class="panel-note">@list.Count(s => s.Debt.Status == DebtStatus.Active) active</span></div>
+        <ul class="list-rows">
+            @foreach (var s in list)
+            {
+                var d = s.Debt;
+                <li class="list-row">
+                    <span class="cat-icon @(d.Direction == DebtDirection.IOwe ? "tone-rose" : "tone-green")"><i class="bi bi-@(d.Direction == DebtDirection.IOwe ? "bank" : "person-down")" aria-hidden="true"></i></span>
+                    <div class="list-row-main">
+                        <a class="list-row-title" asp-action="Details" asp-route-id="@d.Id">@d.Description</a>
+                        <span class="list-row-sub">
+                            @d.Counterparty · @d.Type.Text()
+                            @if (d.DueDate != null)
+                            {
+                                <span>· due @Preferences.Date(d.DueDate)</span>
+                            }
+                        </span>
+                        <div class="meter mt-2 @(d.Status == DebtStatus.Settled ? "is-done" : s.IsOverdue ? "is-over" : "")" style="max-width:360px">
+                            <span style="width:@(Math.Min(100, s.Percent).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span>
+                        </div>
+                    </div>
+                    <div class="list-row-end">
+                        <div class="amount num">@Money.Format(s.Outstanding, d.Currency)</div>
+                        @if (s.IsOverdue)
+                        {
+                            <span class="status-pill tone-rose">Overdue</span>
+                        }
+                        else if (d.Status != DebtStatus.Active)
+                        {
+                            <span class="status-pill tone-green">@d.Status.Text()</span>
+                        }
+                        else
+                        {
+                            <span class="list-row-sub">@s.Percent.ToString("0")% repaid</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+}

@@ -1,0 +1,112 @@
+@model DebtFormViewModel
+@using MyFinances.Services
+@{
+    var editing = Model.Id != null;
+    ViewData["Title"] = editing ? "Edit debt" : Model.Direction == DebtDirection.IOwe ? "Money I owe" : "Money owed to me";
+    ViewData["Crumbs"] = new List<(string, string)> { ("Debts & loans", Url.Action("Index")!) };
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@ViewData["Title"]</h1>
+        <p class="page-lede">What is outstanding is worked out from the original amount and the principal of each repayment.</p>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Direction" class="form-label">This is</label>
+                    <select asp-for="Direction" class="form-select" asp-items="EnumText.Options<DebtDirection>(Model.Direction)"></select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select asp-for="Type" class="form-select" asp-items="EnumText.Options<DebtType>(Model.Type)"></select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Description" class="form-label"></label>
+                    <input asp-for="Description" class="form-control" placeholder="e.g. Car loan" />
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Counterparty" class="form-label"></label>
+                    <input asp-for="Counterparty" class="form-control" placeholder="e.g. CBZ Bank, or a person's name" />
+                    <span asp-validation-for="Counterparty" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="OriginalAmount" class="form-label"></label>
+                    <input asp-for="OriginalAmount" class="form-control num" type="number" step="0.01" min="0.01" value="@(Model.OriginalAmount == 0 ? "" : Model.OriginalAmount.ToString("0.00"))" />
+                    <span asp-validation-for="OriginalAmount" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label"></label>
+                    <select asp-for="Currency" class="form-select" asp-items="EnumText.Options<Currency>(Model.Currency)"></select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="InterestRate" class="form-label"></label>
+                    <input asp-for="InterestRate" class="form-control num" type="number" step="0.01" min="0" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" class="form-control" type="date" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="DueDate" class="form-label"></label>
+                    <input asp-for="DueDate" class="form-control" type="date" />
+                </div>
+                @if (editing)
+                {
+                    <div class="col-md-4">
+                        <label asp-for="Status" class="form-label"></label>
+                        <select asp-for="Status" class="form-select" asp-items="EnumText.Options<DebtStatus>(Model.Status)"></select>
+                    </div>
+                }
+                <div class="col-md-4">
+                    <label asp-for="RepaymentFrequency" class="form-label"></label>
+                    <select asp-for="RepaymentFrequency" class="form-select">
+                        <option value="">No fixed schedule</option>
+                        @foreach (var f in Enum.GetValues<Frequency>())
+                        {
+                            <option value="@f" selected="@(f == Model.RepaymentFrequency)">@f</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="RepaymentAmount" class="form-label"></label>
+                    <input asp-for="RepaymentAmount" class="form-control num" type="number" step="0.01" min="0" />
+                </div>
+                @if (!editing)
+                {
+                    <div class="col-md-8">
+                        <label asp-for="DisbursementAccountId" class="form-label"></label>
+                        <select asp-for="DisbursementAccountId" class="form-select">
+                            <option value="">Don't record it — it's already in my ledger, or older than my records</option>
+                            @foreach (var a in Model.Accounts)
+                            {
+                                <option value="@a.Id" selected="@(a.Id == Model.DisbursementAccountId)">@a.Name (@a.Currency)</option>
+                            }
+                        </select>
+                        <div class="form-text">Borrowed money arriving, or lent money leaving, changes that account's balance but is not income or spending.</div>
+                    </div>
+                }
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a class="btn btn-light" href="@(editing ? Url.Action("Details", new { id = Model.Id }) : Url.Action("Index"))">Cancel</a>
+                <button class="btn btn-primary" type="submit">@(editing ? "Save changes" : "Add debt")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,162 @@
+@model DebtDetailsViewModel
+@using MyFinances.Services
+@inject UserPreferences Preferences
+@{
+    var s = Model.Standing;
+    var d = s.Debt;
+    var iOwe = d.Direction == DebtDirection.IOwe;
+    ViewData["Title"] = d.Description;
+    ViewData["Crumbs"] = new List<(string, string)> { ("Debts & loans", Url.Action("Index")!) };
+    await Preferences.GetAsync();
+}
+
+<div class="page-head">
+    <div>
+        <h1 class="page-heading">@d.Description</h1>
+        <p class="page-lede mt-1">
+            <span class="status-pill @(iOwe ? "tone-rose" : "tone-green")">@d.Direction.Text()</span>
+            @d.Counterparty · @d.Type.Text()
+            @if (s.IsOverdue)
+            {
+                <span class="status-pill tone-rose ms-1">Overdue</span>
+            }
+            else if (d.Status != DebtStatus.Active)
+            {
+                <span class="status-pill tone-slate ms-1">@d.Status.Text()</span>
+            }
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Edit" asp-route-id="@d.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+        <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" data-confirm="Delete this debt, its payments and any ledger entries they made?">
+            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card is-hero">
+        <div class="stat-top"><span class="stat-label">Outstanding</span><span class="stat-icon"><i class="bi bi-cash-coin" aria-hidden="true"></i></span></div>
+        <div class="stat-value num">@Money.Format(s.Outstanding, d.Currency)</div>
+        <div class="stat-note">of @Money.Format(d.OriginalAmount, d.Currency) · @s.Percent.ToString("0")% repaid</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Principal repaid</span></div>
+        <div class="stat-value num">@Money.Format(s.PrincipalPaid, d.Currency)</div>
+        <div class="stat-note">reduces what is owed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Interest @(iOwe ? "paid" : "received")</span></div>
+        <div class="stat-value num">@Money.Format(s.InterestPaid, d.Currency)</div>
+        <div class="stat-note">@(d.InterestRate == null ? "No rate recorded" : $"{d.InterestRate:0.##}% a year")</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top"><span class="stat-label">Due</span></div>
+        <div class="stat-value num" style="font-size:1.25rem">@Preferences.Date(d.DueDate, "No date")</div>
+        <div class="stat-note">@(d.RepaymentFrequency == null ? "No fixed schedule" : $"{d.RepaymentFrequency} · {(d.RepaymentAmount == null ? "amount not set" : Money.Format(d.RepaymentAmount.Value, d.Currency))}")</div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Payment history</span><span class="panel-note">Started @Preferences.Date(d.StartDate)</span></div>
+            @if (!Model.Payments.Any() && !Model.Opening.Any())
+            {
+                <div class="empty-state is-compact"><div class="empty-title">No payments yet</div></div>
+            }
+            <ul class="list-rows">
+                @foreach (var p in Model.Payments)
+                {
+                    <li class="list-row">
+                        <span class="cat-icon tone-teal"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
+                        <div class="list-row-main">
+                            <span class="list-row-title">@Money.Format(p.Principal, d.Currency) principal@(p.Interest > 0 ? " + " + Money.Format(p.Interest, d.Currency) + " interest" : "")</span>
+                            <span class="list-row-sub">
+                                @Preferences.Date(p.Date) ·
+                                @(p.Account == null ? "recorded on the debt only" : (iOwe ? "paid from " : "paid into ") + p.Account.Name)
+                                @(p.Notes != null ? " · " + p.Notes : "")
+                            </span>
+                        </div>
+                        <div class="list-row-end d-flex align-items-center gap-2">
+                            <span class="amount num">@Money.Format(p.Total, d.Currency)</span>
+                            <form asp-action="RemovePayment" method="post" data-confirm="Remove this payment@(p.Account != null ? " and its ledger entries" : "")?">
+                                <input type="hidden" name="id" value="@d.Id" />
+                                <input type="hidden" name="paymentId" value="@p.Id" />
+                                <button class="btn btn-sm btn-light" type="submit" aria-label="Remove payment"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                            </form>
+                        </div>
+                    </li>
+                }
+                @foreach (var t in Model.Opening)
+                {
+                    <li class="list-row">
+                        <span class="cat-icon tone-blue"><i class="bi bi-flag" aria-hidden="true"></i></span>
+                        <div class="list-row-main">
+                            <span class="list-row-title">@t.Description</span>
+                            <span class="list-row-sub">@Preferences.Date(t.Date) · @(iOwe ? "arrived in " : "left from ") @t.Account?.Name</span>
+                        </div>
+                        <div class="list-row-end"><span class="amount num">@Money.Format(t.Amount, t.Currency)</span></div>
+                    </li>
+                }
+            </ul>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(d.Notes))
+        {
+            <p class="text-muted mt-3">@d.Notes</p>
+        }
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header"><span class="panel-title">Record a @(iOwe ? "repayment" : "payment received")</span></div>
+            <div class="card-body">
+                @if (s.Outstanding <= 0 && d.Status != DebtStatus.Active)
+                {
+                    <p class="text-muted small mb-0">This debt is settled. Interest-only payments can still be recorded below if needed.</p>
+                }
+                <form asp-action="Pay" asp-route-id="@d.Id" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label asp-for="Form.Principal" class="form-label">Principal (@d.Currency)</label>
+                            <input asp-for="Form.Principal" class="form-control num" type="number" step="0.01" min="0" max="@s.Outstanding.ToString("0.00")" />
+                        </div>
+                        <div class="col-6">
+                            <label asp-for="Form.Interest" class="form-label">Interest (@d.Currency)</label>
+                            <input asp-for="Form.Interest" class="form-control num" type="number" step="0.01" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Date" class="form-label">Date</label>
+                        <input asp-for="Form.Date" class="form-control" type="date" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.AccountId" class="form-label">@(iOwe ? "Paid from" : "Paid into")</label>
+                        <select asp-for="Form.AccountId" class="form-select">
+                            <option value="">Debt only — it's already in my ledger</option>
+                            @foreach (var a in Model.Accounts)
+                            {
+                                <option value="@a.Id" selected="@(a.Id == Model.Form.AccountId)">@a.Name</option>
+                            }
+                        </select>
+                        <div class="form-text">
+                            Picking an account writes the principal as a debt movement and the interest as
+                            @(iOwe ? "an expense" : "income") — so pick one only if you have not recorded the payment already.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Notes" class="form-label">Notes</label>
+                        <input asp-for="Form.Notes" class="form-control" />
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit">Record payment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
