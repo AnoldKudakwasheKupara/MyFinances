@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Privacy";
+    Layout = "_AuthLayout";
+}
+
+<div class="auth-head">
+    <h1>Privacy</h1>
+    <p>What MyFinances keeps about you, and what it does with it.</p>
+</div>
+
+<div class="privacy-text">
+
+    <h2>What is kept</h2>
+    <p>
+        Your name, email address and settings, and the records you enter:
+        accounts, transactions, budgets, goals, debts, bills, assets and any
+        receipts you upload. Nothing else is collected and there is no
+        tracking or advertising.
+    </p>
+
+    <h2>Signing in with Google, GitHub, Facebook or X</h2>
+    <p>
+        If you sign in with one of these, MyFinances receives only your
+        name, your email address (where the service shares it) and an
+        identifier for your account there. It uses them to open your
+        account and recognise you next time. It does not post anything,
+        read your contacts or reach anything else in that account.
+    </p>
+
+    <h2>Who can see it</h2>
+    <p>
+        Only you. Each account sees its own records and nobody else's.
+        Your data is never sold or shared. It is stored on the servers
+        that run MyFinances (Render for the app, Neon for the database).
+    </p>
+
+    <h2>Your copy and deleting it</h2>
+    <p>
+        Under <em>Settings</em> you can download everything as a file.
+        Under <em>My profile → Personal data</em> you can delete your account,
+        which removes all your records at once. You can also unlink a
+        sign-in service there, or remove MyFinances from that service's own
+        settings.
+    </p>
+
+</div>
+
+<p class="auth-switch">
+    <a asp-area="Identity" asp-page="/Account/Login">Back to sign in</a>
+</p>

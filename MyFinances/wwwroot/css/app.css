@@ -954,6 +954,9 @@ a.list-row-title:hover { color: var(--primary); }
 .btn-provider { display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--bg-card); border: 1px solid var(--border-strong); color: var(--text-primary); font-weight: 600; font-size: 0.88rem; }
 .btn-provider:hover, .btn-provider:focus-visible { background: var(--bg-soft); border-color: var(--primary); color: var(--text-primary); }
 .btn-provider i { font-size: 1.05rem; }
+.auth-foot a { color: inherit; }
+.privacy-text h2 { font-size: 1rem; font-weight: 700; margin: 1.4rem 0 0.4rem; }
+.privacy-text p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin: 0; }
 
 .field-icon { position: relative; display: block; }
 .field-icon > i { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }

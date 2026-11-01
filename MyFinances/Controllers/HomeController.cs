@@ -25,5 +25,9 @@ namespace MyFinances.Controllers
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Status(int id) => View(id);
+
+        // Public, so Google and the others can link to it from their sign-in screens.
+        [AllowAnonymous]
+        public IActionResult Privacy() => View();
     }
 }
