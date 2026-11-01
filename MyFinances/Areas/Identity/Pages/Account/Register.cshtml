@@ -91,6 +91,8 @@
 
 </form>
 
+<partial name="_ExternalLoginButtons" model="(Model.ExternalLogins, Model.ReturnUrl)" />
+
 <p class="auth-switch">
     Already have an account?
     <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Sign in</a>

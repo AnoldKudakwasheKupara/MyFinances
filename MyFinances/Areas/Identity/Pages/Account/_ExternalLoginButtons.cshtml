@@ -1,0 +1,22 @@
+@using Microsoft.AspNetCore.Authentication
+@model (IList<AuthenticationScheme> Providers, string? ReturnUrl)
+
+@* Shown only for providers whose keys are set; see Security/ExternalProviders. *@
+@if (Model.Providers.Count > 0)
+{
+    <div class="auth-divider"><span>or continue with</span></div>
+
+    <form asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="auth-providers">
+        @foreach (var provider in Model.Providers)
+        {
+            <button type="submit"
+                    class="btn btn-provider"
+                    name="provider"
+                    value="@provider.Name"
+                    title="Sign in with your @provider.DisplayName account">
+                <i class="bi bi-@MyFinances.Security.ExternalProviders.Icon(provider.Name)" aria-hidden="true"></i>
+                @provider.DisplayName
+            </button>
+        }
+    </form>
+}

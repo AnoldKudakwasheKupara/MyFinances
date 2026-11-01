@@ -45,6 +45,8 @@ public class RegisterModel : PageModel
 
     public string? ReturnUrl { get; set; }
 
+    public IList<Microsoft.AspNetCore.Authentication.AuthenticationScheme> ExternalLogins { get; set; } = [];
+
     public bool IsOpen => _configuration.GetValue("Registration:Enabled", true);
 
     public class InputModel
@@ -73,12 +75,13 @@ public class RegisterModel : PageModel
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-    public IActionResult OnGet(string? returnUrl = null)
+    public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
             return LocalRedirect("~/");
 
         ReturnUrl = returnUrl;
+        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
         return Page();
     }
 
@@ -86,6 +89,7 @@ public class RegisterModel : PageModel
     {
         returnUrl ??= Url.Content("~/");
         ReturnUrl = returnUrl;
+        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
         if (!IsOpen)
             return NotFound();
@@ -116,7 +120,7 @@ public class RegisterModel : PageModel
 
         if (_userManager.Options.SignIn.RequireConfirmedAccount)
         {
-            await SendConfirmationAsync(user);
+            await SendConfirmationAsync(this, _userManager, _email, _logger, user);
 
             return RedirectToPage("RegisterConfirmation", new { email = user.Email });
         }
@@ -126,18 +130,27 @@ public class RegisterModel : PageModel
         return LocalRedirect(returnUrl);
     }
 
-    private async Task SendConfirmationAsync(ApplicationUser user)
+    /// <summary>
+    /// Emails a new person the link that confirms their address. Also
+    /// used when an account is opened through Google and the like.
+    /// </summary>
+    internal static async Task SendConfirmationAsync(
+        PageModel page,
+        UserManager<ApplicationUser> userManager,
+        EmailService email,
+        ILogger logger,
+        ApplicationUser user)
     {
-        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
-        var link = Url.Page(
+        var link = page.Url.Page(
             "/Account/ConfirmEmail",
             pageHandler: null,
             values: new { area = "Identity", userId = user.Id, code },
-            protocol: Request.Scheme)!;
+            protocol: page.Request.Scheme)!;
 
-        var sent = await _email.SendAsync(new OutgoingEmail(
+        var sent = await email.SendAsync(new OutgoingEmail(
             user.Email!,
             user.FullName,
             "Confirm your MyFinances account",
@@ -148,7 +161,7 @@ public class RegisterModel : PageModel
 
         if (!sent)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "User {UserId} signed up but the confirmation email could not be sent.",
                 user.Id);
         }

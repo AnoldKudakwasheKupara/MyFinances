@@ -32,6 +32,9 @@ namespace MyFinances.Security
                 ["/Identity/Account/LoginWithRecoveryCode"] = new(60, TimeSpan.FromMinutes(5)),
                 [ForgotPasswordPath] = new(20, TimeSpan.FromHours(1)),
                 ["/Identity/Account/Register"] = new(10, TimeSpan.FromHours(1)),
+                // Starting a sign-in with Google and the like, and opening
+                // an account through one.
+                ["/Identity/Account/ExternalLogin"] = new(30, TimeSpan.FromHours(1)),
                 ["/Identity/Account/ResendEmailConfirmation"] = new(20, TimeSpan.FromHours(1)),
                 ["/Identity/Account/ResetPassword"] = new(20, TimeSpan.FromMinutes(15)),
             };

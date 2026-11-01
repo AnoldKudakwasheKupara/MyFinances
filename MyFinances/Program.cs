@@ -72,6 +72,8 @@ builder.Services
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
 
+ExternalProviders.Add(builder.Services.AddAuthentication(), builder.Configuration);
+
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 {
     options.ValidationInterval = TimeSpan.FromMinutes(5);

@@ -1,2 +1,63 @@
 @page
 @model ExternalLoginModel
+
+@{
+    ViewData["Title"] = "Finish creating your account";
+}
+
+<div class="auth-head">
+    <h1>One more step</h1>
+    <p>
+        You signed in with @Model.ProviderDisplayName. Check your details
+        and choose your main currency to open your MyFinances account.
+    </p>
+</div>
+
+<form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.FullName" class="form-label"></label>
+        <span class="field-icon">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <input asp-for="Input.FullName" class="form-control" autocomplete="name" aria-required="true" />
+        </span>
+        <span asp-validation-for="Input.FullName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label"></label>
+        <span class="field-icon">
+            <i class="bi bi-envelope" aria-hidden="true"></i>
+            <input asp-for="Input.Email" class="form-control" autocomplete="email" aria-required="true" placeholder="you@example.com" />
+        </span>
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="Input.ReportingCurrency" class="form-label"></label>
+        <select asp-for="Input.ReportingCurrency" class="form-select">
+            @foreach (var currency in Enum.GetValues<MyFinances.Entities.Currency>())
+            {
+                <option value="@currency">@currency — @MyFinances.Services.Money.Name(currency)</option>
+            }
+        </select>
+        <div class="form-text">Totals and reports are shown in this currency. You can change it later.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">
+        Create my account
+        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+    </button>
+
+</form>
+
+<p class="auth-switch">
+    Already have an account?
+    <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Sign in with your password</a>
+</p>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

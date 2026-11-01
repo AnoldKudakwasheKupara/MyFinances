@@ -28,8 +28,9 @@ The architecture, schema and money rules are in
 - **Settings** — main currency, date format, financial year, budget
   thresholds, theme, reminders, categories, exchange rates and a full
   data download.
-- **Accounts for anyone** — open sign-up; every person sees only their
-  own records.
+- **Accounts for anyone** — open sign-up, with a password or with
+  Google, GitHub, Facebook or X; every person sees only their own
+  records.
 
 ## First run on a new machine
 
@@ -150,6 +151,34 @@ Settings you may want under the service's **Environment** tab:
 
 Until email is enabled, password reset links cannot be sent, accounts
 need no confirmation, and reminders are shown in the app only.
+
+### Signing in with Google, GitHub, Facebook or X
+
+The sign-in and sign-up pages offer a button for each provider whose
+keys are set, and none for the others. For each one, register an app
+with the provider, give it the callback address below (your own
+address, if it differs), and put its two keys under the service's
+**Environment** tab:
+
+| Provider | Where to register | Callback address | Variables |
+| --- | --- | --- | --- |
+| Google | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → Create credentials → OAuth client ID → Web application | `https://myfinances-rm5j.onrender.com/signin-google` | `Authentication__Google__ClientId`, `Authentication__Google__ClientSecret` |
+| GitHub | [GitHub → Settings → Developer settings → OAuth Apps](https://github.com/settings/developers) | `https://myfinances-rm5j.onrender.com/signin-github` | `Authentication__GitHub__ClientId`, `Authentication__GitHub__ClientSecret` |
+| Facebook | [Meta for Developers](https://developers.facebook.com/apps) → Create app → Facebook Login | `https://myfinances-rm5j.onrender.com/signin-facebook` | `Authentication__Facebook__ClientId` (App ID), `Authentication__Facebook__ClientSecret` (App secret) |
+| X | [X Developer Portal](https://developer.x.com/en/portal/dashboard) → project app → User authentication settings, OAuth 2.0, type *Web App* | `https://myfinances-rm5j.onrender.com/signin-twitter` | `Authentication__X__ClientId`, `Authentication__X__ClientSecret` (the OAuth 2.0 client keys) |
+
+Saving the variables restarts the service and the button appears.
+Locally, set the same keys with `dotnet user-secrets set
+"Authentication:Google:ClientId" "…"` and use `http://localhost:5180`
+in the callback address.
+
+The first time someone signs in with a provider, they confirm their
+name, email and main currency and get an account with no password. X
+does not share email addresses, so people coming from X type theirs.
+An email that already has an account is not joined to the provider
+automatically, since that would hand the account to whoever controls
+the provider login: its owner signs in with their password and links
+the provider under *My profile → External logins*.
 
 ## Backups and recovery
 

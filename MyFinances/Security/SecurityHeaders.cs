@@ -10,7 +10,11 @@ namespace MyFinances.Security
     {
         // Inline script is limited to the theme switch in the layout and
         // a few onclick handlers; everything else is served from /js.
-        private const string Policy =
+        // Forms may also lead on to the sign-in pages of the outside
+        // providers in use, which the browser checks on the redirect.
+        private static string? _policy;
+
+        private static string Policy => _policy ??=
             "default-src 'self'; " +
             "script-src 'self' 'unsafe-inline'; " +
             "style-src 'self' 'unsafe-inline'; " +
@@ -19,7 +23,7 @@ namespace MyFinances.Security
             "connect-src 'self'; " +
             "object-src 'none'; " +
             "base-uri 'self'; " +
-            "form-action 'self'; " +
+            "form-action " + string.Join(" ", ["'self'", .. ExternalProviders.FormTargets]) + "; " +
             "frame-ancestors 'none'";
 
         public static Task AddAsync(HttpContext context, Func<Task> next)

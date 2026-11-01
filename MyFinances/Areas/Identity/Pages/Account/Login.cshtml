@@ -118,6 +118,8 @@
 
 </form>
 
+<partial name="_ExternalLoginButtons" model="(Model.ExternalLogins ?? [], Model.ReturnUrl)" />
+
 <p class="auth-switch">
     New to MyFinances?
     <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a>
