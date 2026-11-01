@@ -114,8 +114,13 @@ Setting it up once:
    connections and runs migrations), and copy the connection string,
    `postgresql://…?sslmode=require…`.
 2. In Render choose **New → Blueprint**, pick this repository, and paste
-   that string as `DATABASE_URL` when asked. Every push to `master`
-   redeploys; the first start creates all the tables.
+   that string as `DATABASE_URL` when asked. The first start creates all
+   the tables.
+
+A Blueprint made from a connected GitHub account redeploys on every push
+to `master`. One made from the public repository address (as the live
+service is) does not: after pushing, open the service and choose
+**Manual Deploy → Deploy latest commit**.
 
 The sign-in keys are kept in the database, so restarts do not sign
 anyone out. Render ends HTTPS at its proxy; the blueprint sets
